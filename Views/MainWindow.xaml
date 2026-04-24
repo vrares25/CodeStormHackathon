@@ -3,9 +3,16 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         mc:Ignorable="d"
-        Title="Sistem Inteligent Management Academic - v2.0" Height="700" Width="1000"
-        Background="#F0F2F5">
+        Title="Sistem Inteligent Management Academic - v2.0" Height="750" Width="1050"
+        TextElement.Foreground="{DynamicResource MaterialDesignBody}"
+        TextElement.FontWeight="Regular"
+        TextElement.FontSize="13"
+        TextOptions.TextFormattingMode="Ideal"
+        TextOptions.TextRenderingMode="Auto"
+        Background="{DynamicResource MaterialDesignPaper}"
+        FontFamily="{DynamicResource MaterialDesignDefaultFont}">
 
     <Grid Margin="20">
         <Grid.RowDefinitions>
@@ -14,35 +21,44 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <GroupBox Header="Configurare Surse Date" Padding="15" Margin="0,0,0,15" BorderBrush="#D1D5DB">
-            <StackPanel>
+        <GroupBox Header="Configurare Surse Date" Margin="0,0,0,20" 
+                  Style="{StaticResource MaterialDesignCardGroupBox}"
+                  materialDesign:ColorZoneAssist.Mode="PrimaryLight">
+            <StackPanel Margin="10">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="20"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <StackPanel Grid.Column="0" Margin="5">
-                        <Label Content="Plan de Învățământ (Source of Truth):" FontWeight="Bold" Foreground="#374151"/>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="Plan de Învățământ (Source of Truth)" FontWeight="SemiBold" Margin="0,0,0,10" Foreground="{DynamicResource MaterialDesignBodyLight}"/>
                         <DockPanel>
-                            <Button x:Name="BtnBrowsePlan" Content="Caută..." Width="80" Click="BtnBrowsePlan_Click" DockPanel.Dock="Right" Margin="5,0,0,0"/>
-                            <TextBox x:Name="TxtPlanPath" Text="Selectează plan_invatamant.pdf..." IsReadOnly="True" VerticalContentAlignment="Center" Padding="5"/>
+                            <Button x:Name="BtnBrowsePlan" Content="Caută..." Click="BtnBrowsePlan_Click" DockPanel.Dock="Right" Margin="10,0,0,0" Style="{StaticResource MaterialDesignFlatMidBgButton}"/>
+                            <TextBox x:Name="TxtPlanPath" IsReadOnly="True" 
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}" 
+                                     materialDesign:HintAssist.Hint="Trage fișierul plan_invatamant.pdf aici..."
+                                     AllowDrop="True" PreviewDragOver="FileDragOver" PreviewDrop="FileDropPlan"/>
                         </DockPanel>
                     </StackPanel>
 
-                    <StackPanel Grid.Column="1" Margin="5">
-                        <Label Content="Fișa Disciplinei (Document de analizat):" FontWeight="Bold" Foreground="#374151"/>
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="Fișa Disciplinei (Document de analizat)" FontWeight="SemiBold" Margin="0,0,0,10" Foreground="{DynamicResource MaterialDesignBodyLight}"/>
                         <DockPanel>
-                            <Button x:Name="BtnBrowseFD" Content="Caută..." Width="80" Click="BtnBrowseFD_Click" DockPanel.Dock="Right" Margin="5,0,0,0"/>
-                            <TextBox x:Name="TxtFDPath" Text="Selectează fisa_disciplina.pdf sau .docx..." IsReadOnly="True" VerticalContentAlignment="Center" Padding="5"/>
+                            <Button x:Name="BtnBrowseFD" Content="Caută..." Click="BtnBrowseFD_Click" DockPanel.Dock="Right" Margin="10,0,0,0" Style="{StaticResource MaterialDesignFlatMidBgButton}"/>
+                            <TextBox x:Name="TxtFDPath" IsReadOnly="True" 
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}" 
+                                     materialDesign:HintAssist.Hint="Trage fisa_disciplina.docx aici..."
+                                     AllowDrop="True" PreviewDragOver="FileDragOver" PreviewDrop="FileDropFD"/>
                         </DockPanel>
                     </StackPanel>
                 </Grid>
 
-                <StackPanel Orientation="Horizontal" Margin="5,10,0,0">
-                    <Label Content="Metodă Citire:" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                    <RadioButton x:Name="RadioPdfParser" Content="Parser Direct (PDF Digital/Word)" IsChecked="True" VerticalAlignment="Center" Margin="0,0,20,0"/>
-                    <RadioButton x:Name="RadioAiVision" Content="AI Vision - Llama 3.2 (Scanări/Poze)" VerticalAlignment="Center"/>
+                <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
+                    <TextBlock Text="Metodă Citire:" VerticalAlignment="Center" Margin="0,0,15,0" FontWeight="SemiBold"/>
+                    <RadioButton x:Name="RadioPdfParser" Content="Parser Direct (PDF/Word)" IsChecked="True" Margin="0,0,20,0" Style="{StaticResource MaterialDesignUserForegroundRadioButton}"/>
+                    <RadioButton x:Name="RadioAiVision" Content="AI Vision (Scanări/Poze)" Style="{StaticResource MaterialDesignUserForegroundRadioButton}"/>
                 </StackPanel>
             </StackPanel>
         </GroupBox>
@@ -50,77 +66,92 @@
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="1.2*"/>
+                <ColumnDefinition Width="20"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <Grid Margin="0,0,10,0">
+            <Grid Grid.Column="0">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <UniformGrid Columns="2" Grid.Row="0" Margin="0,0,0,10">
-                    <Button x:Name="BtnFastCheck" Click="BtnFastCheck_Click" Margin="0,0,5,0" Height="40" Background="#E5E7EB" BorderBrush="#9CA3AF">
+                <UniformGrid Columns="2" Grid.Row="0" Margin="0,0,0,15">
+                    <Button x:Name="BtnFastCheck" Click="BtnFastCheck_Click" Margin="0,0,10,0" Height="45" Style="{StaticResource MaterialDesignOutlinedButton}">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="⚡ Verificare Rapidă" FontWeight="Bold"/>
-                            <TextBlock Text=" (Fără AI)" FontSize="10" VerticalAlignment="Center" Margin="5,0,0,0"/>
+                            <materialDesign:PackIcon Kind="LightningBolt" Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <TextBlock Text="Verificare Rapidă" VerticalAlignment="Center" FontWeight="Bold"/>
                         </StackPanel>
                     </Button>
-                    <Button x:Name="BtnAiAnalysis" Click="BtnAiAnalysis_Click" Margin="5,0,0,0" Height="40" Background="#6366F1" Foreground="White" BorderThickness="0">
+
+                    <Button x:Name="BtnAiAnalysis" Click="BtnAiAnalysis_Click" Margin="10,0,0,0" Height="45" Style="{StaticResource MaterialDesignRaisedButton}" materialDesign:ButtonAssist.CornerRadius="5">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="🧠 Analiză Avansată" FontWeight="Bold"/>
-                            <TextBlock Text=" (Gemma 3)" FontSize="10" VerticalAlignment="Center" Margin="5,0,0,0"/>
+                            <materialDesign:PackIcon Kind="Brain" Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <TextBlock Text="Analiză Avansată AI" VerticalAlignment="Center" FontWeight="Bold"/>
                         </StackPanel>
                     </Button>
                 </UniformGrid>
 
-                <GroupBox Header="Raport de Integritate și Conformitate" Grid.Row="1">
-                    <ListBox x:Name="ErrorsListBox" BorderThickness="0" Background="Transparent" Padding="5">
-                    </ListBox>
+                <GroupBox Header="Raport de Integritate și Conformitate" Grid.Row="1" Style="{StaticResource MaterialDesignCardGroupBox}" Margin="0,0,0,15">
+                    <ListBox x:Name="ErrorsListBox" Style="{StaticResource MaterialDesignListBox}"/>
                 </GroupBox>
 
-                <Button x:Name="BtnExportSyllabus" Grid.Row="2" Content="Migrare pe Template Nou (2026)" 
-                        Click="BtnExportSyllabus_Click" Height="45" Margin="0,10,0,0" 
-                        Background="#10B981" Foreground="White" FontWeight="Bold" FontSize="14" BorderThickness="0"/>
+                <Button x:Name="BtnExportSyllabus" Grid.Row="2" Click="BtnExportSyllabus_Click" Height="50" 
+                        Style="{StaticResource MaterialDesignRaisedButton}" 
+                        Background="#10B981" BorderBrush="#10B981" Foreground="White"
+                        materialDesign:ButtonAssist.CornerRadius="8">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="FileDocumentArrowRight" Width="24" Height="24" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <TextBlock Text="Migrare pe Template Nou (2026)" FontSize="15" FontWeight="Bold" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
             </Grid>
 
-            <GroupBox Header="Gemma 3 AI Copilot (Google API)" Grid.Column="1" BorderBrush="#6366F1">
+            <GroupBox Grid.Column="2" Header="AI Copilot Asistent" Style="{StaticResource MaterialDesignCardGroupBox}">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <ScrollViewer VerticalScrollBarVisibility="Auto">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto">
-                            <StackPanel x:Name="ChatDisplay" Margin="10">
-                                <TextBlock Text="Asistentul este gata..." Foreground="#6B7280" FontStyle="Italic"/>
-                            </StackPanel>
-                        </ScrollViewer>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,0,0,10">
+                        <StackPanel x:Name="ChatDisplay" Margin="5">
+                            <Border Padding="12,10" Margin="0,0,0,10" MaxWidth="260" HorizontalAlignment="Left" 
+                                    Background="#E5E7EB" CornerRadius="15,15,15,2">
+                                <TextBlock Text="Salut! Sunt pregătit să te ajut. Încarcă documentele pentru context sau întreabă-mă ceva direct." 
+                                           TextWrapping="Wrap" Foreground="#1F2937"/>
+                            </Border>
+                        </StackPanel>
                     </ScrollViewer>
 
-                    <Border Grid.Row="1" BorderBrush="#E5E7EB" BorderThickness="0,1,0,0" Padding="10">
-                        <DockPanel>
-                            <Button x:Name="BtnSendCopilot" Content="Trimite" Click="BtnSendCopilot_Click" 
-                                    DockPanel.Dock="Right" Width="70" Background="#6366F1" Foreground="White" Margin="10,0,0,0"/>
-                            <TextBox x:Name="ChatInput" ToolTip="Ex: Reformulează bibliografia..." 
-                                     Height="35" VerticalContentAlignment="Center" Padding="10,0"/>
-                        </DockPanel>
-                    </Border>
+                    <Grid Grid.Row="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="ChatInput" Grid.Column="0" Style="{StaticResource MaterialDesignOutlinedTextBox}" 
+                                 materialDesign:HintAssist.Hint="Scrie o cerință..." TextWrapping="Wrap" MaxHeight="80" VerticalScrollBarVisibility="Auto"/>
+                        <Button x:Name="BtnSendCopilot" Grid.Column="1" Click="BtnSendCopilot_Click" Style="{StaticResource MaterialDesignFloatingActionMiniButton}" Margin="10,0,0,0" VerticalAlignment="Bottom">
+                            <materialDesign:PackIcon Kind="Send" Width="20" Height="20"/>
+                        </Button>
+                    </Grid>
                 </Grid>
             </GroupBox>
         </Grid>
 
-        <StatusBar Grid.Row="2" Background="White" BorderBrush="#E5E7EB" BorderThickness="0,1,0,0" Margin="0,15,0,0" Padding="5">
+        <StatusBar Grid.Row="2" Background="Transparent" Margin="0,10,0,0">
             <StatusBarItem>
-                <TextBlock x:Name="StatusText" Text="Pregătit pentru procesare." Foreground="#4B5563"/>
+                <StackPanel Orientation="Horizontal">
+                    <materialDesign:PackIcon Kind="InformationOutline" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{DynamicResource MaterialDesignBodyLight}"/>
+                    <ProgressBar x:Name="LoadingSpinner" Style="{StaticResource MaterialDesignCircularProgressBar}" IsIndeterminate="True" Visibility="Collapsed" Width="16" Height="16" Margin="0,0,8,0"/>
+                    <TextBlock x:Name="StatusText" Text="Pregătit pentru procesare."/>
+                </StackPanel>
             </StatusBarItem>
-            <Separator/>
             <StatusBarItem HorizontalAlignment="Right">
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="Local: Llama 3.2 Vision" Margin="0,0,15,0" FontSize="11" Foreground="#9CA3AF"/>
-                    <TextBlock Text="Cloud: Gemma 3 27B" FontWeight="Bold" FontSize="11" Foreground="#6366F1"/>
+                    <materialDesign:Chip Content="Local: Llama 3.2 Vision" Margin="0,0,10,0"/>
+                    <materialDesign:Chip Content="Cloud: Gemma 3 27B" Background="{DynamicResource PrimaryHueLightBrush}" Foreground="{DynamicResource PrimaryHueLightForegroundBrush}"/>
                 </StackPanel>
             </StatusBarItem>
         </StatusBar>

@@ -1,7 +1,6 @@
 ﻿using CodeStormHackathon.Models;
 using CodeStormHackathon.Services;
 using Microsoft.Win32;
-using CodeStormHackathon.Models;
 using SistemAcademic.Services;
 using System;
 using System.Collections.Generic;
@@ -9,7 +8,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
+using MaterialDesignThemes.Wpf;
 
 namespace SistemAcademic
 {
@@ -21,7 +22,6 @@ namespace SistemAcademic
         private readonly SyncService _syncService;
         private readonly TemplateShifterService _templateShifter;
 
-        // Contextul global care va fi trimis către AI (conține Planul, Fișa și Erorile)
         private string _extractedDocumentContext = "";
         private SyllabusData _currentExtractedData;
 
@@ -34,26 +34,70 @@ namespace SistemAcademic
             _validationService = new ValidationService();
             _syncService = new SyncService();
             _templateShifter = new TemplateShifterService();
+
+            // UX: Trimitere mesaj cu Enter
+            ChatInput.KeyDown += ChatInput_KeyDown;
         }
 
         // =========================================================================
-        // 1. SELECȚIE FIȘIERE
+        // 1. SELECȚIE FIȘIERE & DRAG DROP (Logica Clean: Nume vs Cale)
         // =========================================================================
 
         private void BtnBrowsePlan_Click(object sender, RoutedEventArgs e)
         {
             var openFileDialog = new OpenFileDialog { Filter = "PDF Files (*.pdf)|*.pdf|Word Documents (*.docx)|*.docx" };
-            if (openFileDialog.ShowDialog() == true) TxtPlanPath.Text = openFileDialog.FileName;
+            if (openFileDialog.ShowDialog() == true)
+            {
+                TxtPlanPath.Text = System.IO.Path.GetFileName(openFileDialog.FileName);
+                TxtPlanPath.Tag = openFileDialog.FileName;
+            }
         }
 
         private void BtnBrowseFD_Click(object sender, RoutedEventArgs e)
         {
             var openFileDialog = new OpenFileDialog { Filter = "Documente (*.pdf;*.docx;*.jpg;*.png)|*.pdf;*.docx;*.jpg;*.png" };
-            if (openFileDialog.ShowDialog() == true) TxtFDPath.Text = openFileDialog.FileName;
+            if (openFileDialog.ShowDialog() == true)
+            {
+                TxtFDPath.Text = System.IO.Path.GetFileName(openFileDialog.FileName);
+                TxtFDPath.Tag = openFileDialog.FileName;
+            }
+        }
+
+        private void FileDragOver(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(DataFormats.FileDrop)) e.Effects = DragDropEffects.Copy;
+            else e.Effects = DragDropEffects.None;
+            e.Handled = true;
+        }
+
+        private void FileDropPlan(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
+                if (files?.Length > 0)
+                {
+                    TxtPlanPath.Text = System.IO.Path.GetFileName(files[0]);
+                    TxtPlanPath.Tag = files[0];
+                }
+            }
+        }
+
+        private void FileDropFD(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
+                if (files?.Length > 0)
+                {
+                    TxtFDPath.Text = System.IO.Path.GetFileName(files[0]);
+                    TxtFDPath.Tag = files[0];
+                }
+            }
         }
 
         // =========================================================================
-        // 2. VERIFICARE RAPIDĂ (FĂRĂ AI)
+        // 2. PROCESARE & VALIDARE (Folosind .Tag)
         // =========================================================================
 
         private void BtnFastCheck_Click(object sender, RoutedEventArgs e)
@@ -61,34 +105,23 @@ namespace SistemAcademic
             if (!ValidateSelection(true)) return;
 
             ErrorsListBox.Items.Clear();
-            StatusText.Text = "Verificare logică rapidă în curs...";
+            StatusText.Text = "Verificare rapidă...";
+            LoadingSpinner.Visibility = Visibility.Visible;
 
             try
             {
-                // Citim ambele documente digital
-                string planText = ExtractTextFromFile(TxtPlanPath.Text);
-                string fdText = ExtractTextFromFile(TxtFDPath.Text);
+                string planText = ExtractTextFromFile(TxtPlanPath);
+                string fdText = ExtractTextFromFile(TxtFDPath);
 
-                // Parsare fără AI (folosind logica din WordReader)
                 _currentExtractedData = ManualParser(fdText);
-
-                // Rulăm validările de business
                 RunBusinessValidations(_currentExtractedData);
-
-                // Construim contextul pentru chat în caz că profesorul întreabă ceva
                 UpdateGlobalContext(planText, fdText, _currentExtractedData);
 
-                StatusText.Text = "Verificare rapidă finalizată.";
+                StatusText.Text = "Verificare finalizată.";
             }
-            catch (Exception ex)
-            {
-                AddErrorMessage($"Eroare procesare: {ex.Message}");
-            }
+            catch (Exception ex) { AddErrorMessage($"Eroare: {ex.Message}"); }
+            finally { LoadingSpinner.Visibility = Visibility.Collapsed; }
         }
-
-        // =========================================================================
-        // 3. ANALIZĂ AVANSATĂ (CU AI - GEMMA 3 & VISION)
-        // =========================================================================
 
         private async void BtnAiAnalysis_Click(object sender, RoutedEventArgs e)
         {
@@ -96,91 +129,76 @@ namespace SistemAcademic
 
             ErrorsListBox.Items.Clear();
             BtnAiAnalysis.IsEnabled = false;
-            StatusText.Text = "AI-ul analizează documentele...";
+            LoadingSpinner.Visibility = Visibility.Visible;
 
             try
             {
-                string planText = ExtractTextFromFile(TxtPlanPath.Text);
-                string fdText = "";
+                string planText = ExtractTextFromFile(TxtPlanPath);
+                string fdText = (RadioAiVision.IsChecked == true)
+                    ? await _aiService.ExtractTextFromImageAsync(TxtFDPath.Tag.ToString())
+                    : ExtractTextFromFile(TxtFDPath);
 
-                // Decidem dacă folosim Vision sau Parser Digital
-                if (RadioAiVision.IsChecked == true)
-                {
-                    StatusText.Text = "Procesare imagine cu Llama 3.2 Vision...";
-                    fdText = await _aiService.ExtractTextFromImageAsync(TxtFDPath.Text);
-                }
-                else
-                {
-                    fdText = ExtractTextFromFile(TxtFDPath.Text);
-                }
-
-                // Gemma 3 extrage datele structurate din Fișă
-                StatusText.Text = "Gemma 3 extrage datele JSON...";
+                StatusText.Text = "Gemma 3 extrage datele...";
                 _currentExtractedData = await _aiService.ParseTextToDataAsync(fdText);
 
-                // Validăm datele extrase
                 RunBusinessValidations(_currentExtractedData);
-
-                // Actualizăm contextul global cu tot ce am aflat
                 UpdateGlobalContext(planText, fdText, _currentExtractedData);
 
-                // Cerem un raport semantic inițial de la Gemma 3
                 StatusText.Text = "Generare raport semantic...";
-                string report = await _aiService.AskCopilotAsync(_extractedDocumentContext, "Analizează aceste date și oferă un scurt raport despre conformitate.");
-
-                AddInfoMessage("--- RAPORT SEMANTIC GEMMA 3 ---");
+                string report = await _aiService.AskCopilotAsync(_extractedDocumentContext, "Oferă un scurt raport de conformitate.");
                 AddInfoMessage(report);
 
                 StatusText.Text = "Analiză AI completă.";
             }
-            catch (Exception ex)
-            {
-                AddErrorMessage($"Eroare AI: {ex.Message}");
-            }
+            catch (Exception ex) { AddErrorMessage($"Eroare AI: {ex.Message}"); }
             finally
             {
                 BtnAiAnalysis.IsEnabled = true;
+                LoadingSpinner.Visibility = Visibility.Collapsed;
             }
         }
 
         // =========================================================================
-        // 4. ACADEMIC COPILOT (CHAT) - FOLOSEȘTE CONTEXTUL COMPLET
+        // 3. CHAT UX (Enter & Bule Stilizate)
         // =========================================================================
+
+        private void ChatInput_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                e.Handled = true;
+                BtnSendCopilot_Click(sender, new RoutedEventArgs());
+            }
+        }
 
         private async void BtnSendCopilot_Click(object sender, RoutedEventArgs e)
         {
             string query = ChatInput.Text;
             if (string.IsNullOrWhiteSpace(query)) return;
 
-            if (string.IsNullOrEmpty(_extractedDocumentContext))
-            {
-                AddChatMessage("Sistem", "⚠️ Încarcă documentele și rulează o analiză pentru a oferi context asistentului.");
-                return;
-            }
-
             AddChatMessage("Tu", query);
             ChatInput.Text = "";
             BtnSendCopilot.IsEnabled = false;
+            LoadingSpinner.Visibility = Visibility.Visible;
 
             try
             {
-                StatusText.Text = "Gemma 3 procesează...";
-                string response = await _aiService.AskCopilotAsync(_extractedDocumentContext, query);
+                string safeContext = string.IsNullOrEmpty(_extractedDocumentContext) ? "Fără documente încărcate încă." : _extractedDocumentContext;
+                string response = await _aiService.AskCopilotAsync(safeContext, query);
                 AddChatMessage("Gemma 3", response);
                 StatusText.Text = "Gata.";
             }
-            catch (Exception ex)
-            {
-                AddChatMessage("Sistem", $"Eroare API: {ex.Message}");
-            }
+            catch (Exception ex) { AddChatMessage("Sistem", $"Eroare: {ex.Message}"); }
             finally
             {
                 BtnSendCopilot.IsEnabled = true;
+                ChatInput.Focus();
+                LoadingSpinner.Visibility = Visibility.Collapsed;
             }
         }
 
         // =========================================================================
-        // 5. EXPORT TEMPLATE
+        // 4. EXPORT
         // =========================================================================
 
         private void BtnExportSyllabus_Click(object sender, RoutedEventArgs e)
@@ -200,10 +218,7 @@ namespace SistemAcademic
                 _templateShifter.GenerateNewSyllabus(_currentExtractedData, templatePath, output);
                 MessageBox.Show($"Fișier salvat pe Desktop:\n{output}", "Succes Export");
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Eroare la export: {ex.Message}");
-            }
+            catch (Exception ex) { MessageBox.Show($"Eroare la export: {ex.Message}"); }
         }
 
         // =========================================================================
@@ -212,52 +227,48 @@ namespace SistemAcademic
 
         private void UpdateGlobalContext(string plan, string fd, SyllabusData data)
         {
-            _extractedDocumentContext = $@"
-                === PLAN DE ÎNVĂȚĂMÂNT (SURSA DE ADEVĂR) ===
-                {plan}
-
-                === FIȘA DISCIPLINEI CURENTĂ ===
-                {fd}
-
-                === ERORI DETECTATE DE SISTEM ===
-                {GetValidationErrorsAsString(data)}
-            ";
+            _extractedDocumentContext = $@"=== PLAN ===\n{plan}\n\n=== FISA ===\n{fd}\n\n=== ERORI ===\n{GetValidationErrorsAsString(data)}";
         }
 
-        private string ExtractTextFromFile(string path)
+        private string ExtractTextFromFile(TextBox target)
         {
-            if (string.IsNullOrEmpty(path) || path.Contains("Selectează")) return "";
+            if (target.Tag == null) return "";
+            string path = target.Tag.ToString();
             if (path.EndsWith(".docx")) return _wordReader.ExtractTextFromDocx(path);
-            if (path.EndsWith(".pdf")) return "Conținut extras din " + System.IO.Path.GetFileName(path);
+            if (path.EndsWith(".pdf")) return _wordReader.ExtractTextFromPdfDirect(path);
             return "";
         }
 
         private void RunBusinessValidations(SyllabusData data)
         {
+            // 1. Verificăm integritatea (Erorile 1 și 2: Biblio și Capitole)
             var errors = _validationService.CheckIntegrity(data);
             foreach (var err in errors) AddErrorMessage(err);
 
-            string math;
-            if (!_validationService.ValidateWeights(data, out math)) AddErrorMessage(math);
+            // 2. Verificăm matematica (Eroarea 3: Ponderile 0%)
+            if (!_validationService.ValidateWeights(data, out string math))
+                AddErrorMessage(math);
 
+            // 3. Comparăm cu Planul de Învățământ (Eroarea 4: Conflictul de evaluare)
+            // Momentan folosim un mockPlan, dar aici va veni logica de comparare reală
             var mockPlan = new StudyPlanEntry { Credits = 5, EvaluationType = "Examen" };
             var conflicts = _syncService.CompareWithPlan(data, mockPlan);
-            foreach (var c in conflicts) AddErrorMessage($"[CONFLICT]: {c}");
+            foreach (var c in conflicts)
+                AddErrorMessage($"[CONFLICT]: {c}");
         }
 
         private string GetValidationErrorsAsString(SyllabusData data)
         {
             var errors = _validationService.CheckIntegrity(data);
-            string math;
-            if (!_validationService.ValidateWeights(data, out math)) errors.Add(math);
-            return errors.Any() ? string.Join("\n", errors) : "Nicio eroare detectată.";
+            if (!_validationService.ValidateWeights(data, out string math)) errors.Add(math);
+            return errors.Any() ? string.Join("\n", errors) : "OK";
         }
 
-        private SyllabusData ManualParser(string text) => new SyllabusData { SubjectName = "Curs Extras Digital", Credits = 5 };
+        private SyllabusData ManualParser(string text) => new SyllabusData { SubjectName = "Curs Extras", Credits = 5 };
 
         private bool ValidateSelection(bool both = false)
         {
-            if (both && (TxtPlanPath.Text.Contains("Selectează") || TxtFDPath.Text.Contains("Selectează")))
+            if (both && (TxtPlanPath.Tag == null || TxtFDPath.Tag == null))
             {
                 MessageBox.Show("Selectează ambele documente!");
                 return false;
@@ -265,17 +276,39 @@ namespace SistemAcademic
             return true;
         }
 
-        private void AddErrorMessage(string msg) => ErrorsListBox.Items.Add(new TextBlock { Text = $"❌ {msg}", Foreground = Brushes.Red, TextWrapping = TextWrapping.Wrap });
-        private void AddInfoMessage(string msg) => ErrorsListBox.Items.Add(new TextBlock { Text = $"🧠 {msg}", Foreground = Brushes.Blue, FontStyle = FontStyles.Italic, TextWrapping = TextWrapping.Wrap });
-        private void AddSuccessMessage(string msg) => ErrorsListBox.Items.Add(new TextBlock { Text = $"✅ {msg}", Foreground = Brushes.Green });
+        private void AddErrorMessage(string msg) => AddStatusItem(msg, PackIconKind.AlertCircleOutline, Brushes.Red);
+        private void AddInfoMessage(string msg) => AddStatusItem(msg, PackIconKind.Brain, Brushes.Blue);
+        private void AddSuccessMessage(string msg) => AddStatusItem(msg, PackIconKind.CheckCircleOutline, Brushes.Green);
+
+        private void AddStatusItem(string msg, PackIconKind icon, Brush color)
+        {
+            var panel = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 2, 0, 2) };
+            panel.Children.Add(new PackIcon { Kind = icon, Foreground = color, Margin = new Thickness(0, 0, 5, 0), VerticalAlignment = VerticalAlignment.Center });
+            panel.Children.Add(new TextBlock { Text = msg, Foreground = color, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center });
+            ErrorsListBox.Items.Add(panel);
+        }
 
         private void AddChatMessage(string sender, string msg)
         {
-            var panel = new StackPanel { Margin = new Thickness(0, 5, 0, 10) };
-            panel.Children.Add(new TextBlock { Text = sender, FontWeight = FontWeights.Bold, Foreground = (sender == "Tu" ? Brushes.DarkSlateGray : Brushes.Indigo) });
-            panel.Children.Add(new TextBlock { Text = msg, TextWrapping = TextWrapping.Wrap });
-
-            ChatDisplay.Children.Add(panel);
+            bool isUser = sender == "Tu";
+            var bubble = new Border
+            {
+                Padding = new Thickness(12, 10, 12, 10),
+                Margin = new Thickness(0, 5, 0, 10),
+                MaxWidth = 260,
+                HorizontalAlignment = isUser ? HorizontalAlignment.Right : HorizontalAlignment.Left,
+                CornerRadius = isUser ? new CornerRadius(15, 15, 2, 15) : new CornerRadius(15, 15, 15, 2),
+                Background = isUser ? new SolidColorBrush((Color)ColorConverter.ConvertFromString("#6366F1"))
+                                    : new SolidColorBrush((Color)ColorConverter.ConvertFromString("#E5E7EB"))
+            };
+            bubble.Child = new TextBlock
+            {
+                Text = msg,
+                TextWrapping = TextWrapping.Wrap,
+                Foreground = isUser ? Brushes.White : new SolidColorBrush((Color)ColorConverter.ConvertFromString("#1F2937"))
+            };
+            ChatDisplay.Children.Add(bubble);
+            (ChatDisplay.Parent as ScrollViewer)?.ScrollToBottom();
         }
     }
 }
