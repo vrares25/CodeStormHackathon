@@ -1,134 +1,100 @@
 ﻿using CodeStormHackathon.Models;
-using Newtonsoft.Json; 
+using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SistemAcademic.Services 
+namespace SistemAcademic.Services
 {
     public class AIService
     {
         private readonly HttpClient _httpClient;
-
         private const string GoogleApiKey = "";
-
-
-        private const string GoogleApiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemma-3-27b-it:generateContent";
-
-        // --- CONFIGURARE OLLAMA LOCAL (LLAMA VISION) ---
-        private const string OllamaUrl = "http://localhost:11434/api/generate";
+        private const string GeminiApiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
         public AIService()
         {
             _httpClient = new HttpClient();
-            _httpClient.Timeout = TimeSpan.FromMinutes(3); // Modelele pot dura la procesare
+            _httpClient.Timeout = TimeSpan.FromMinutes(5);
         }
 
-        // =========================================================================
-        // 1. LLAMA VISION (OLLAMA LOCAL) - Extragere text din imagini
-        // =========================================================================
-        public async Task<string> ExtractTextFromImageAsync(string imagePath)
+        public async Task<List<SyllabusData>> ExtractAllSyllabusDataAsync(string filePath)
         {
-            byte[] imageBytes = File.ReadAllBytes(imagePath);
-            string base64Image = Convert.ToBase64String(imageBytes);
+            string base64File = await Task.Run(() => Convert.ToBase64String(File.ReadAllBytes(filePath)));
+            string extension = Path.GetExtension(filePath).ToLower();
+            string mimeType = extension == ".pdf" ? "application/pdf" : "image/jpeg";
 
-            var requestBody = new
-            {
-                model = "llama3.2-vision",
-                prompt = "Extract all the text from this academic document. Preserve the structure of tables and lists. Return ONLY the text, no other comments.",
-                images = new[] { base64Image },
-                stream = false
-            };
-
-            string jsonRequest = JsonConvert.SerializeObject(requestBody);
-            var content = new StringContent(jsonRequest, Encoding.UTF8, "application/json");
-
-            var response = await _httpClient.PostAsync(OllamaUrl, content);
-            response.EnsureSuccessStatusCode();
-
-            var jsonResponse = await response.Content.ReadAsStringAsync();
-            dynamic result = JsonConvert.DeserializeObject(jsonResponse);
-
-            return result.response;
-        }
-
-        // =========================================================================
-        // 2. GEMMA (GOOGLE API) - Parsare text brut în JSON (Nivel 4)
-        // =========================================================================
-        public async Task<SyllabusData> ParseTextToDataAsync(string rawText)
-        {
-            string prompt = $@"
-            You are an academic data extractor. Extract the following information from the text and return it STRICTLY as a JSON object matching this schema, with no markdown formatting or other text:
-            {{
+            string prompt = @"Analizează documentul și extrage TOATE materiile identificate. 
+            Returnează DOAR un array JSON cu structura:
+            [
+              {
                 ""SubjectName"": ""string"",
                 ""Credits"": number,
-                ""EvaluationType"": ""string (Examen or Colocviu)"",
+                ""EvaluationType"": ""Examen/Colocviu"",
                 ""Bibliography"": ""string"",
-                ""FinalExamWeight"": number (0 to 100),
-                ""ActivityWeight"": number (0 to 100)
-            }}
+                ""FinalExamWeight"": number,
+                ""ActivityWeight"": number
+              }
+            ]";
 
-            Document Text:
-            {rawText}";
-
-            string aiResponseText = await SendGoogleApiRequestAsync(prompt);
-
-            try
-            {
-                // De multe ori API-urile mai pun block-uri de cod gen ```json ... ``` 
-                // Așa că le curățăm înainte de deserializare
-                string cleanJson = aiResponseText.Replace("```json", "").Replace("```", "").Trim();
-
-                return JsonConvert.DeserializeObject<SyllabusData>(cleanJson);
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"Gemma a returnat un JSON invalid: {ex.Message}\n\nRăspuns brut: {aiResponseText}");
-            }
-        }
-
-        // =========================================================================
-        // 3. GEMMA (GOOGLE API) - Academic Copilot Chat (Nivel 3)
-        // =========================================================================
-        public async Task<string> AskCopilotAsync(string context, string userPrompt)
-        {
-            string fullPrompt = $"Context din Fișa Disciplinei:\n{context}\n\nCerinta profesorului: {userPrompt}\n\nAcționează ca un asistent academic. Reformuleaza textul conform cerintei. Returneaza doar textul modificat/recomandat.";
-
-            return await SendGoogleApiRequestAsync(fullPrompt);
-        }
-
-        // =========================================================================
-        // METODĂ INTERNĂ: Helper pentru a face call-ul către Google AI Studio
-        // =========================================================================
-        private async Task<string> SendGoogleApiRequestAsync(string promptText)
-        {
-            // Construim JSON-ul fix in formatul cerut de Google API
             var requestBody = new
             {
-                contents = new[]
-                {
-                    new
-                    {
-                        parts = new[] { new { text = promptText } }
+                contents = new[] {
+                    new {
+                        parts = new object[] {
+                            new { text = prompt },
+                            new { inline_data = new { mime_type = mimeType, data = base64File } }
+                        }
                     }
                 }
             };
 
             var content = new StringContent(JsonConvert.SerializeObject(requestBody), Encoding.UTF8, "application/json");
-            var response = await _httpClient.PostAsync($"{GoogleApiUrl}?key={GoogleApiKey}", content);
+            var response = await _httpClient.PostAsync($"{GeminiApiUrl}?key={GoogleApiKey}", content);
+            var responseText = await response.Content.ReadAsStringAsync();
 
-            if (!response.IsSuccessStatusCode)
+            dynamic result = JsonConvert.DeserializeObject(responseText);
+            string rawJson = result.candidates[0].content.parts[0].text;
+            string cleanJson = rawJson.Replace("```json", "").Replace("```", "").Trim();
+
+            return JsonConvert.DeserializeObject<List<SyllabusData>>(cleanJson);
+        }
+
+        public async Task<StudyPlanEntry> ExtractFromStudyPlanAsync(string planPath, string subjectToFind)
+        {
+            string base64File = await Task.Run(() => Convert.ToBase64String(File.ReadAllBytes(planPath)));
+            string prompt = $"Caută materia '{subjectToFind}' în acest Plan de Învățământ. Returnează DOAR JSON: {{ \"Credits\": 0, \"EvaluationType\": \"string\" }}";
+
+            var requestBody = new
             {
-                var errorDetails = await response.Content.ReadAsStringAsync();
-                throw new Exception($"Eroare API Google ({response.StatusCode}): {errorDetails}");
-            }
+                contents = new[] {
+                    new {
+                        parts = new object[] {
+                            new { text = prompt },
+                            new { inline_data = new { mime_type = "application/pdf", data = base64File } }
+                        }
+                    }
+                }
+            };
 
-            var jsonResponse = await response.Content.ReadAsStringAsync();
-            dynamic result = JsonConvert.DeserializeObject(jsonResponse);
+            var content = new StringContent(JsonConvert.SerializeObject(requestBody), Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync($"{GeminiApiUrl}?key={GoogleApiKey}", content);
+            var responseText = await response.Content.ReadAsStringAsync();
 
-            // Extragem textul răspunsului din ierarhia JSON-ului Google
+            dynamic result = JsonConvert.DeserializeObject(responseText);
+            string cleanJson = ((string)result.candidates[0].content.parts[0].text).Replace("```json", "").Replace("```", "").Trim();
+            return JsonConvert.DeserializeObject<StudyPlanEntry>(cleanJson);
+        }
+
+        public async Task<string> AskCopilotAsync(string context, string userPrompt)
+        {
+            var requestBody = new { contents = new[] { new { parts = new[] { new { text = $"CONTEXT: {context}\n\nUSER: {userPrompt}" } } } } };
+            var content = new StringContent(JsonConvert.SerializeObject(requestBody), Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync($"{GeminiApiUrl}?key={GoogleApiKey}", content);
+            dynamic result = JsonConvert.DeserializeObject(await response.Content.ReadAsStringAsync());
             return result.candidates[0].content.parts[0].text;
         }
     }
