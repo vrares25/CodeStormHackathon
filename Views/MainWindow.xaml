@@ -1,0 +1,101 @@
+﻿<Window x:Class="CodeStormHackathon.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Sistem Inteligent Management Academic" Height="600" Width="900"
+        Background="#F5F5F5">
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <GroupBox Header="Configurare Surse Date" Padding="10" Margin="0,0,0,15">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Margin="5">
+                    <Label Content="Plan de Învățământ (Sursa de Adevăr):" FontWeight="Bold"/>
+                    <DockPanel>
+                        <Button x:Name="BtnBrowsePlan" Click="BtnBrowsePlan_Click" 
+                                Content="Caută..." Width="75" DockPanel.Dock="Right" Margin="5,0,0,0"/>
+                        <TextBox x:Name="TxtPlanPath" Text="Calea catre PDF/Scan..." 
+                                 IsReadOnly="True" VerticalContentAlignment="Center"/>
+                    </DockPanel>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Margin="5">
+                    <Label Content="Fișa Disciplinei (Document de lucru):" FontWeight="Bold"/>
+                    <DockPanel>
+                        <Button x:Name="BtnBrowseFD" Click="BtnBrowseFD_Click" 
+                                Content="Caută..." Width="75" DockPanel.Dock="Right" Margin="5,0,0,0"/>
+                        <TextBox x:Name="TxtFDPath" Text="Calea catre .docx..." 
+                                 IsReadOnly="True" VerticalContentAlignment="Center"/>
+                    </DockPanel>
+                </StackPanel>
+            </Grid>
+        </GroupBox>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1.5*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <GroupBox Header="Raport Validare &amp; Sincronizare" Margin="0,0,10,0">
+                <DockPanel>
+                    <Button x:Name="BtnRunChecks" Click="BtnRunChecks_Click" 
+                            Content="Rulează Verificările" DockPanel.Dock="Top" Margin="5" 
+                            Background="#007ACC" Foreground="White" Height="30"/>
+                    <ListBox x:Name="ErrorsListBox" Margin="5" BorderThickness="0" Background="Transparent">
+                    </ListBox>
+
+                    <Button x:Name="BtnExportSyllabus" 
+                              Content="Generează Fișa Nouă (Migrare 2026)" 
+                              Height="35" Margin="5,10,5,5" 
+                              Background="#28A745" Foreground="White" 
+                              FontWeight="Bold" 
+                              Click="BtnExportSyllabus_Click"
+                              DockPanel.Dock="Bottom"/>   
+                </DockPanel>
+            </GroupBox>
+
+            <GroupBox Header="Academic Copilot (AI Local)" Grid.Column="1">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <TextBlock x:Name="ChatHistory" TextWrapping="Wrap" Margin="5" 
+                                   Text="Salut! Selectează o secțiune pentru a o rafina cu AI-ul local Qwen." Foreground="Gray"/>
+                    </ScrollViewer>
+
+                    <DockPanel Grid.Row="1" Margin="5">
+                        <Button x:Name="BtnSendCopilot" Click="BtnSendCopilot_Click" 
+                                Content="Trimite" DockPanel.Dock="Right" Width="60" Margin="5,0,0,0"/>
+                        <TextBox x:Name="ChatInput" Height="25" VerticalContentAlignment="Center"/>
+                    </DockPanel>
+                </Grid>
+            </GroupBox>
+        </Grid>
+
+        <StatusBar Grid.Row="2" Background="White" Margin="0,10,0,0">
+            <StatusBarItem>
+                <TextBlock x:Name="StatusText" Text="Gata de procesare."/>
+            </StatusBarItem>
+            <Separator/>
+            <StatusBarItem HorizontalAlignment="Right">
+                <TextBlock Text="Model: Qwen 3.5 27B (Local)"/>
+            </StatusBarItem>
+        </StatusBar>
+    </Grid>
+</Window>
