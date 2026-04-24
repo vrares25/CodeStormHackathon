@@ -2,7 +2,7 @@
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using System.Text;
-
+using UglyToad.PdfPig;
 namespace CodeStormHackathon.Services
 {
     public class WordReaderService
@@ -33,6 +33,18 @@ namespace CodeStormHackathon.Services
                 ActivityWeight = 30,
                 CourseChapters = new List<string> { "Curs 1: Intro" }
             };
+        }
+        public string ExtractTextFromPdfDirect(string filePath)
+        {
+            using (var pdf = UglyToad.PdfPig.PdfDocument.Open(filePath))
+            {
+                StringBuilder sb = new StringBuilder();
+                foreach (var page in pdf.GetPages())
+                {
+                    sb.Append(page.Text);
+                }
+                return sb.ToString();
+            }
         }
     }
 }
