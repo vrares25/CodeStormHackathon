@@ -36,7 +36,11 @@ namespace CodeStormHackathon.Views
                 }
             };
         }
-
+        private void BtnOpenLatexFiller_Click(object sender, RoutedEventArgs e)
+        {
+            var latexWindow = new TemplateFillerWindow();
+            latexWindow.Show();
+        }
         // ─────────────────────────────────────────────────────────────────
         // Buton principal: EXECUTE AI ACADEMIC AUDIT
         // Rulează Level 1 + Level 2 pentru toate materiile extrase

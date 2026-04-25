@@ -1,0 +1,46 @@
+﻿<Window x:Class="CodeStormHackathon.Views.TemplateFillerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="Migrare Inteligentă pe Șablon LaTeX" Height="450" Width="700"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource MaterialDesignPaper}"
+        TextElement.Foreground="{DynamicResource MaterialDesignBody}"
+        FontFamily="{DynamicResource MaterialDesignDefaultFont}">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Text="Populare Automată Șabloane LaTeX" FontSize="20" FontWeight="Bold" Foreground="#4338CA" Margin="0,0,0,20"/>
+
+        <StackPanel Grid.Row="1" Margin="0,0,0,15">
+            <TextBlock Text="1. Documentul Sursă (ex: Fișa veche .pdf / .docx)" FontWeight="SemiBold" Margin="0,0,0,5"/>
+            <DockPanel>
+                <Button x:Name="BtnBrowseSource" Content="Caută..." DockPanel.Dock="Right" Margin="10,0,0,0" Click="BtnBrowseSource_Click" Style="{StaticResource MaterialDesignFlatMidBgButton}"/>
+                <TextBox x:Name="TxtSourcePath" IsReadOnly="True" Style="{StaticResource MaterialDesignOutlinedTextBox}" materialDesign:HintAssist.Hint="Selectați documentul cu date..."/>
+            </DockPanel>
+        </StackPanel>
+
+        <StackPanel Grid.Row="2" Margin="0,0,0,20">
+            <TextBlock Text="2. Șablonul LaTeX (.tex / .txt)" FontWeight="SemiBold" Margin="0,0,0,5"/>
+            <DockPanel>
+                <Button x:Name="BtnBrowseTemplate" Content="Caută..." DockPanel.Dock="Right" Margin="10,0,0,0" Click="BtnBrowseTemplate_Click" Style="{StaticResource MaterialDesignFlatMidBgButton}"/>
+                <TextBox x:Name="TxtTemplatePath" IsReadOnly="True" Style="{StaticResource MaterialDesignOutlinedTextBox}" materialDesign:HintAssist.Hint="Selectați șablonul LaTeX gol..."/>
+            </DockPanel>
+        </StackPanel>
+
+        <StackPanel Grid.Row="3">
+            <Button x:Name="BtnGenerate" Content="GENEREAZĂ FIȘIER LATEX" Height="45" Click="BtnGenerate_Click"
+                    Background="#10B981" BorderBrush="#10B981" Foreground="White" materialDesign:ButtonAssist.CornerRadius="6" FontSize="14" FontWeight="Bold"/>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,15,0,0">
+                <ProgressBar x:Name="LoadingSpinner" Style="{StaticResource MaterialDesignCircularProgressBar}" IsIndeterminate="True" Visibility="Collapsed" Width="20" Height="20" Margin="0,0,10,0"/>
+                <TextBlock x:Name="StatusText" Text="Așteptare documente..." VerticalAlignment="Center" FontStyle="Italic"/>
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</Window>

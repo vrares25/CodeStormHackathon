@@ -318,5 +318,74 @@ JSON obligatoriu:
                 _ => "application/pdf"
             };
         }
+        // Adaugă în interiorul clasei AIService
+        public async Task<string> FillLatexTemplateFromVisionAsync(string sourceFilePath, string latexTemplate)
+        {
+            // 1. Citim fișierul fizic și îl transformăm în Base64 (pentru Gemini Vision)
+            byte[] fileBytes = File.ReadAllBytes(sourceFilePath);
+            string base64File = Convert.ToBase64String(fileBytes);
+            string mimeType = GetMimeType(sourceFilePath);
+
+            // 2. Promptul care combină parsarea vizuală cu completarea șablonului
+            string prompt = $@"
+Ești un secretar academic expert. 
+Am atașat un document sursă (PDF sau Imagine) care conține date academice structurate (tabele cu planuri de învățământ sau fișe ale disciplinei).
+Sarcina ta este să extragi VIZUAL datele din fișierul atașat și să populezi ȘABLONUL LATEX de mai jos.
+
+ȘABLON LATEX (Sursă):
+{latexTemplate}
+
+REGULI STRICTE:
+1. Returnează CODUL LATEX COMPLET, de la \documentclass până la \end{{document}}.
+2. NU trunchia tabelele! Dacă în PDF-ul atașat vezi 10 materii pentru anul respectiv, mapează-le corect pe toate cele 10 în șablon. Nu folosi ""..."".
+3. Analizează cu atenție rândurile și coloanele din PDF. Corelează corect numărul de ore (Curs, Laborator, Seminar) cu creditele pentru fiecare materie.
+4. Fă escape corect la caracterele speciale LaTeX (ex: & devine \&, % devine \%).
+5. Dacă o materie sau o informație din șablon nu se regăsește deloc în PDF, pune \textcolor{{red}}{{-}}.
+6. Returnează DOAR codul sursă LaTeX. Fără block markdown (```latex).
+";
+
+            // 3. Folosim formatul de request MULTIMODAL (text + fișier) pe care îl ai deja în funcția BuildRequest
+            var requestBody = new
+            {
+                contents = new[]
+                {
+                    new
+                    {
+                        parts = new object[]
+                        {
+                            new { text = prompt },
+                            new { inline_data = new { mime_type = mimeType, data = base64File } }
+                        }
+                    }
+                },
+                generationConfig = new
+                {
+                    temperature = 0.1, 
+                    maxOutputTokens = 8192
+                }
+            };
+
+            var content = new StringContent(JsonConvert.SerializeObject(requestBody), System.Text.Encoding.UTF8, "application/json");
+
+            var response = await _httpClient.PostAsync($"{GeminiApiUrl}?key={GoogleApiKey}", content);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                string error = await response.Content.ReadAsStringAsync();
+                throw new Exception($"Eroare API Gemini: {error}");
+            }
+
+            string responseText = await response.Content.ReadAsStringAsync();
+            dynamic result = JsonConvert.DeserializeObject(responseText);
+            string latexCode = (string)result.candidates[0].content.parts[0].text;
+
+            // Curățare
+            latexCode = latexCode.Trim();
+            if (latexCode.StartsWith("```latex")) latexCode = latexCode.Substring(8);
+            if (latexCode.StartsWith("```")) latexCode = latexCode.Substring(3);
+            if (latexCode.EndsWith("```")) latexCode = latexCode.Substring(0, latexCode.Length - 3);
+
+            return latexCode.Trim();
+        }
     }
 }
