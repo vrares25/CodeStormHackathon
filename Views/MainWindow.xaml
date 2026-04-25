@@ -5,163 +5,216 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         mc:Ignorable="d"
-        Title="Sistem Inteligent Management Academic - v2.0" Height="750" Width="1050"
+        Title="Sistem Inteligent Management Academic - v2.0" Height="800" Width="1100"
+        WindowStartupLocation="CenterScreen"
         TextElement.Foreground="{DynamicResource MaterialDesignBody}"
         TextElement.FontWeight="Regular"
-        TextElement.FontSize="13"
-        Background="{DynamicResource MaterialDesignPaper}"
+        TextElement.FontSize="14"
+        Background="#F3F4F6"
         FontFamily="{DynamicResource MaterialDesignDefaultFont}">
 
-    <Grid Margin="20">
+    <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <GroupBox Header="Configurare Surse Date" Margin="0,0,0,20" 
-                  Style="{StaticResource MaterialDesignCardGroupBox}"
-                  materialDesign:ColorZoneAssist.Mode="PrimaryLight">
-            <StackPanel Margin="10">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="20"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-
-                    <StackPanel Grid.Column="0">
-                        <TextBlock Text="Plan de Învățământ (Source of Truth)" FontWeight="SemiBold" Margin="0,0,0,10"/>
-                        <DockPanel>
-                            <Button x:Name="BtnBrowsePlan" Content="Caută..." Click="BtnBrowsePlan_Click" DockPanel.Dock="Right" Margin="10,0,0,0" Style="{StaticResource MaterialDesignFlatMidBgButton}"/>
-                            <TextBox x:Name="TxtPlanPath" IsReadOnly="True" 
-                                     Style="{StaticResource MaterialDesignOutlinedTextBox}" 
-                                     materialDesign:HintAssist.Hint="Trage fișierul plan.pdf aici..."
-                                     AllowDrop="True" PreviewDragOver="FileDragOver" PreviewDrop="FileDropPlan"/>
-                        </DockPanel>
-                    </StackPanel>
-
-                    <StackPanel Grid.Column="2">
-                        <TextBlock Text="Fișa Disciplinei (Document de analizat)" FontWeight="SemiBold" Margin="0,0,0,10"/>
-                        <DockPanel>
-                            <Button x:Name="BtnBrowseFD" Content="Caută..." Click="BtnBrowseFD_Click" DockPanel.Dock="Right" Margin="10,0,0,0" Style="{StaticResource MaterialDesignFlatMidBgButton}"/>
-                            <TextBox x:Name="TxtFDPath" IsReadOnly="True" 
-                                     Style="{StaticResource MaterialDesignOutlinedTextBox}" 
-                                     materialDesign:HintAssist.Hint="Trage fisele.pdf/docx aici..."
-                                     AllowDrop="True" PreviewDragOver="FileDragOver" PreviewDrop="FileDropFD"/>
-                        </DockPanel>
-                    </StackPanel>
-                </Grid>
-
-                <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
-                    <TextBlock Text="Metodă Citire:" VerticalAlignment="Center" Margin="0,0,15,0" FontWeight="SemiBold"/>
-                    <RadioButton x:Name="RadioPdfParser" Content="Digital (Text)" IsChecked="True" Margin="0,0,20,0" Style="{StaticResource MaterialDesignUserForegroundRadioButton}"/>
-                    <RadioButton x:Name="RadioAiVision" Content="Vision (Scanări/Poze)" Style="{StaticResource MaterialDesignUserForegroundRadioButton}"/>
-                </StackPanel>
-                <Button x:Name="BtnOpenLatexFiller" ToolTip="Populează un șablon LaTeX folosind AI" Click="BtnOpenLatexFiller_Click" Height="50"
-                            Style="{StaticResource MaterialDesignRaisedButton}"
-                            Background="#8B5CF6" BorderBrush="#8B5CF6" Foreground="White"
-                            materialDesign:ButtonAssist.CornerRadius="8" Margin="0,8,0,0">
-                    <StackPanel Orientation="Horizontal">
-                        <materialDesign:PackIcon Kind="FunctionVariant" Width="24" Height="24"
-                                     VerticalAlignment="Center" Margin="0,0,10,0"/>
-                        <TextBlock Text="LaTeX Template Filler (AI)" FontSize="15"
-                                       FontWeight="Bold" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
+        <materialDesign:ColorZone Grid.Row="0" Mode="PrimaryMid" Padding="20,16" materialDesign:ElevationAssist.Elevation="Dp3">
+            <StackPanel Orientation="Horizontal">
+                <materialDesign:PackIcon Kind="BankOutline" Width="32" Height="32" VerticalAlignment="Center" Margin="0,0,15,0" Foreground="White"/>
+                <TextBlock Text="Sistem Inteligent de Management Academic" VerticalAlignment="Center" FontSize="22" FontWeight="Bold" Foreground="White"/>
+                <TextBlock Text="v2.0" VerticalAlignment="Center" FontSize="14" Margin="10,4,0,0" Foreground="#C7D2FE" FontWeight="SemiBold"/>
             </StackPanel>
-        </GroupBox>
+        </materialDesign:ColorZone>
 
-        <Grid Grid.Row="1">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="1.2*"/>
-                <ColumnDefinition Width="20"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
+        <Grid Grid.Row="1" Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
 
-            <Grid Grid.Column="0">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
+            <materialDesign:Card Grid.Row="0" Margin="0,0,0,20" materialDesign:ElevationAssist.Elevation="Dp2" UniformCornerRadius="8">
+                <GroupBox Header="1. Sincronizare și Configurare Surse de Date" 
+                          Style="{StaticResource MaterialDesignCardGroupBox}"
+                          materialDesign:ColorZoneAssist.Mode="Standard"
+                          BorderThickness="0">
+                    <StackPanel Margin="10">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="30"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
 
-                <Button x:Name="BtnAiAnalysis" ToolTip ="Pornește extracția datelor și rulează regulile de validare" Grid.Row="0" Click="BtnAiAnalysis_Click" Margin="0,0,0,15" Height="55" 
-                        Style="{StaticResource MaterialDesignRaisedButton}" materialDesign:ButtonAssist.CornerRadius="8"
-                        Background="#6366F1" BorderBrush="#6366F1" Foreground="White">
-                    <StackPanel Orientation="Horizontal">
-                        <materialDesign:PackIcon Kind="Brain" Width="26" Height="26" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                        <TextBlock Text="EXECUTE AI ACADEMIC AUDIT" VerticalAlignment="Center" FontSize="16" FontWeight="Bold"/>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="📄 Plan de Învățământ (Sursa de Adevăr)" FontWeight="SemiBold" Margin="0,0,0,10" Foreground="#374151"/>
+                                <DockPanel>
+                                    <Button x:Name="BtnBrowsePlan" Content="Caută..." Click="BtnBrowsePlan_Click" Cursor="Hand"
+                                            DockPanel.Dock="Right" Margin="10,0,0,0" Style="{StaticResource MaterialDesignFlatMidBgButton}"/>
+                                    <TextBox x:Name="TxtPlanPath" IsReadOnly="True" 
+                                             Style="{StaticResource MaterialDesignOutlinedTextBox}" 
+                                             materialDesign:HintAssist.Hint="Trage fișierul plan.pdf aici..."
+                                             AllowDrop="True" PreviewDragOver="FileDragOver" PreviewDrop="FileDropPlan"/>
+                                </DockPanel>
+                            </StackPanel>
+
+                            <Border Grid.Column="1" Width="1" Background="#E5E7EB" Margin="14,0"/>
+
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="📋 Fișa Disciplinei (Document de analizat)" FontWeight="SemiBold" Margin="0,0,0,10" Foreground="#374151"/>
+                                <DockPanel>
+                                    <Button x:Name="BtnBrowseFD" Content="Caută..." Click="BtnBrowseFD_Click" Cursor="Hand"
+                                            DockPanel.Dock="Right" Margin="10,0,0,0" Style="{StaticResource MaterialDesignFlatMidBgButton}"/>
+                                    <TextBox x:Name="TxtFDPath" IsReadOnly="True" 
+                                             Style="{StaticResource MaterialDesignOutlinedTextBox}" 
+                                             materialDesign:HintAssist.Hint="Trage fisele.pdf/docx aici..."
+                                             AllowDrop="True" PreviewDragOver="FileDragOver" PreviewDrop="FileDropFD"/>
+                                </DockPanel>
+                            </StackPanel>
+                        </Grid>
+
+                        <Border BorderThickness="0,1,0,0" BorderBrush="#E5E7EB" Margin="0,20,0,15" Padding="0,15,0,0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="⚙️ Metodă de citire documente:" VerticalAlignment="Center" Margin="0,0,15,0" FontWeight="SemiBold" Foreground="#4B5563"/>
+                                    <RadioButton x:Name="RadioPdfParser" Content="Digital (Text)" IsChecked="True" Margin="0,0,20,0" Style="{StaticResource MaterialDesignUserForegroundRadioButton}" Cursor="Hand"/>
+                                    <RadioButton x:Name="RadioAiVision" Content="Vision (Scanări/Poze)" Style="{StaticResource MaterialDesignUserForegroundRadioButton}" Cursor="Hand"/>
+                                </StackPanel>
+
+                                <Button Grid.Column="1" HorizontalAlignment="Right" x:Name="BtnOpenLatexFiller" ToolTip="Populează un șablon LaTeX folosind AI" Click="BtnOpenLatexFiller_Click" Height="40"
+                                        Style="{StaticResource MaterialDesignRaisedButton}" Cursor="Hand"
+                                        Background="#8B5CF6" BorderBrush="#8B5CF6" Foreground="White"
+                                        materialDesign:ButtonAssist.CornerRadius="6">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="FunctionVariant" Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                        <TextBlock Text="LaTeX Template Filler (AI)" FontSize="13" FontWeight="Bold" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
+                        </Border>
                     </StackPanel>
-                </Button>
-
-                <GroupBox Header="Raport de Integritate și Conformitate" Grid.Row="1" Style="{StaticResource MaterialDesignCardGroupBox}" Margin="0,0,0,15">
-                    <ListBox x:Name="ErrorsListBox" Style="{StaticResource MaterialDesignListBox}"/>
                 </GroupBox>
+            </materialDesign:Card>
 
-                <StackPanel Grid.Row="2" Margin="0,0,0,0">
-                    <Button x:Name="BtnExportSyllabus" Click="BtnExportSyllabus_Click" Height="50"
-                                                       Style="{StaticResource MaterialDesignRaisedButton}"
-                                                       Background="#10B981" BorderBrush="#10B981" Foreground="White"
-                                                       materialDesign:ButtonAssist.CornerRadius="8"
-                                                       Margin="0,0,0,8">
-                        <StackPanel Orientation="Horizontal">
-                            <materialDesign:PackIcon Kind="FileDocumentArrowRight" Width="24" Height="24"
-                                     VerticalAlignment="Center" Margin="0,0,10,0"/>
-                            <TextBlock Text="Migrare pe Template Nou (2026)" FontSize="15"
-                       FontWeight="Bold" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="1.3*"/>
+                    <ColumnDefinition Width="20"/>
+                    <ColumnDefinition Width="1*"/>
+                </Grid.ColumnDefinitions>
 
-                    <Button x:Name="BtnOpenBulk" Click="BtnOpenBulk_Click" ToolTip="Smart Updater">Actualizare Bulk</Button>
-                    <!-- ★ BUTON NOU: Syllabus Diff ★ -->
-                    <Button x:Name="BtnOpenDiff" ToolTip ="Deschide fereastra de comparație între versiunea veche și cea curentă a fișei" Click="BtnOpenDiff_Click" Height="50"
-                            Style="{StaticResource MaterialDesignRaisedButton}"
-                            Background="#F59E0B" BorderBrush="#F59E0B" Foreground="White"
-                            materialDesign:ButtonAssist.CornerRadius="8">
-                        <StackPanel Orientation="Horizontal">
-                            <materialDesign:PackIcon Kind="Compare" Width="24" Height="24"
-                                     VerticalAlignment="Center" Margin="0,0,10,0"/>
-                            <TextBlock Text="Syllabus Diff (Comparație Versiuni)" FontSize="15"
-                                       FontWeight="Bold" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
-                </StackPanel>
-            </Grid>
-
-            <GroupBox Grid.Column="2" Header="AI Copilot Asistent" Style="{StaticResource MaterialDesignCardGroupBox}">
-                <Grid>
+                <Grid Grid.Column="0">
                     <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,0,0,10">
-                        <StackPanel x:Name="ChatDisplay" Margin="5"/>
-                    </ScrollViewer>
+                    <Button x:Name="BtnAiAnalysis" ToolTip ="Pornește extracția datelor și rulează regulile de validare" Grid.Row="0" Click="BtnAiAnalysis_Click" Margin="0,0,0,15" Height="60" 
+                            Style="{StaticResource MaterialDesignRaisedButton}" materialDesign:ButtonAssist.CornerRadius="8" Cursor="Hand"
+                            Background="#4F46E5" BorderBrush="#4F46E5" Foreground="White" materialDesign:ElevationAssist.Elevation="Dp4">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="Brain" Width="28" Height="28" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                            <TextBlock Text="EXECUTE AI ACADEMIC AUDIT" VerticalAlignment="Center" FontSize="17" FontWeight="Bold"/>
+                        </StackPanel>
+                    </Button>
 
-                    <Grid Grid.Row="1">
+                    <materialDesign:Card Grid.Row="1" materialDesign:ElevationAssist.Elevation="Dp2" UniformCornerRadius="8" Margin="0,0,0,15">
+                        <GroupBox Header="2. Raport de Integritate și Conformitate" Style="{StaticResource MaterialDesignCardGroupBox}" BorderThickness="0" materialDesign:ColorZoneAssist.Mode="Standard">
+                            <ListBox x:Name="ErrorsListBox" Style="{StaticResource MaterialDesignListBox}" Padding="5"/>
+                        </GroupBox>
+                    </materialDesign:Card>
+
+                    <Grid Grid.Row="2">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="10"/>
+                            <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBox x:Name="ChatInput" Grid.Column="0" Style="{StaticResource MaterialDesignOutlinedTextBox}" 
-                                 materialDesign:HintAssist.Hint="Scrie o cerință..." TextWrapping="Wrap" MaxHeight="80" VerticalScrollBarVisibility="Auto"/>
-                        <Button x:Name="BtnSendCopilot" Grid.Column="1" Click="BtnSendCopilot_Click" Style="{StaticResource MaterialDesignFloatingActionMiniButton}" Margin="10,0,0,0" VerticalAlignment="Bottom">
-                            <materialDesign:PackIcon Kind="Send" Width="20" Height="20"/>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="10"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <Button Grid.Row="0" Grid.Column="0" x:Name="BtnModifyProject" Click="BtnModifyProject_Click" Height="45"
+                                Style="{StaticResource MaterialDesignRaisedButton}" Cursor="Hand" materialDesign:ElevationAssist.Elevation="Dp2"
+                                Background="#10B981" BorderBrush="#10B981" Foreground="White" materialDesign:ButtonAssist.CornerRadius="6">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="FileDocumentEdit" Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="Modificare Proiect (AI)" FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Button Grid.Row="0" Grid.Column="2" x:Name="BtnOpenDiff" ToolTip ="Comparație între versiunea veche și curentă" Click="BtnOpenDiff_Click" Height="45"
+                                Style="{StaticResource MaterialDesignRaisedButton}" Cursor="Hand" materialDesign:ElevationAssist.Elevation="Dp2"
+                                Background="#F59E0B" BorderBrush="#F59E0B" Foreground="White" materialDesign:ButtonAssist.CornerRadius="6">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="Compare" Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="Syllabus Diff (Comparație)" FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Button Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" x:Name="BtnOpenBulk" Click="BtnOpenBulk_Click" Height="40"
+                                Style="{StaticResource MaterialDesignFlatMidBgButton}" Cursor="Hand"
+                                Background="#E0E7FF" Foreground="#4F46E5" materialDesign:ButtonAssist.CornerRadius="6">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="FolderSync" Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="Actualizare Bulk (Mai multe fișiere simultan)" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            </StackPanel>
                         </Button>
                     </Grid>
                 </Grid>
-            </GroupBox>
+
+                <materialDesign:Card Grid.Column="2" materialDesign:ElevationAssist.Elevation="Dp2" UniformCornerRadius="8">
+                    <GroupBox Header="🤖 AI Copilot Asistent" Style="{StaticResource MaterialDesignCardGroupBox}" BorderThickness="0" materialDesign:ColorZoneAssist.Mode="Standard">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="10"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <Border Grid.Row="0" Background="#F9FAFB" CornerRadius="6" BorderBrush="#E5E7EB" BorderThickness="1" Padding="5">
+                                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                    <StackPanel x:Name="ChatDisplay" Margin="5"/>
+                                </ScrollViewer>
+                            </Border>
+
+                            <Grid Grid.Row="2">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBox x:Name="ChatInput" Grid.Column="0" Style="{StaticResource MaterialDesignOutlinedTextBox}" 
+                                         materialDesign:HintAssist.Hint="Pune o întrebare despre document..." TextWrapping="Wrap" 
+                                         MaxHeight="80" VerticalScrollBarVisibility="Auto" Padding="12"/>
+
+                                <Button x:Name="BtnSendCopilot" Grid.Column="1" Click="BtnSendCopilot_Click" Cursor="Hand"
+                                        Style="{StaticResource MaterialDesignFloatingActionMiniButton}" Margin="10,0,0,0" VerticalAlignment="Bottom"
+                                        Background="#4F46E5" BorderBrush="#4F46E5" Foreground="White">
+                                    <materialDesign:PackIcon Kind="Send" Width="20" Height="20" Margin="2,0,0,0"/>
+                                </Button>
+                            </Grid>
+                        </Grid>
+                    </GroupBox>
+                </materialDesign:Card>
+            </Grid>
         </Grid>
 
-        <StatusBar Grid.Row="2" Background="Transparent" Margin="0,10,0,0">
-            <StatusBarItem>
-                <StackPanel Orientation="Horizontal">
-                    <ProgressBar x:Name="LoadingSpinner" Style="{StaticResource MaterialDesignCircularProgressBar}" IsIndeterminate="True" Visibility="Collapsed" Width="16" Height="16" Margin="0,0,8,0"/>
-                    <TextBlock x:Name="StatusText" Text="Pregătit pentru procesare."/>
-                </StackPanel>
-            </StatusBarItem>
-        </StatusBar>
+        <Border Grid.Row="2" Background="#1F2937" Padding="15,6">
+            <StackPanel Orientation="Horizontal">
+                <ProgressBar x:Name="LoadingSpinner" Style="{StaticResource MaterialDesignCircularProgressBar}" 
+                             IsIndeterminate="True" Visibility="Collapsed" Width="16" Height="16" Margin="0,0,10,0" Foreground="#10B981"/>
+                <TextBlock x:Name="StatusText" Text="✅ Sistem pregătit pentru procesare." Foreground="#D1D5DB" FontSize="13" VerticalAlignment="Center"/>
+            </StackPanel>
+        </Border>
     </Grid>
 </Window>

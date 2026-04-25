@@ -41,6 +41,11 @@ namespace CodeStormHackathon.Views
             var latexWindow = new TemplateFillerWindow();
             latexWindow.Show();
         }
+        private void BtnModifyProject_Click(object sender, RoutedEventArgs e)
+        {
+            var modifyWindow = new ModifyProjectWindow();
+            modifyWindow.Show();
+        }
         // ─────────────────────────────────────────────────────────────────
         // Buton principal: EXECUTE AI ACADEMIC AUDIT
         // Rulează Level 1 + Level 2 pentru toate materiile extrase

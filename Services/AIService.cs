@@ -387,5 +387,60 @@ REGULI STRICTE:
 
             return latexCode.Trim();
         }
+        public async Task<string> ModifyProjectFileAsync(string fileContent, string userInstructions)
+        {
+            string prompt = $@"
+Ești un asistent academic și redactor expert. Ai primit un document sursă (text sau cod LaTeX) și o serie de instrucțiuni de la utilizator.
+Sarcina ta este să aplici cerințele utilizatorului pe textul dat, rescriind documentul.
+
+INSTRUCȚIUNI DE LA UTILIZATOR:
+{userInstructions}
+
+CONSTRÂNGERI ACADEMICE OBLIGATORII (Aplică-le dacă au sens în contextul documentului):
+1. Nu depăși limita regulamentară de 60% pentru ponderea examenului final. Dacă utilizatorul cere ceva ilegal (ex: pune examen 80%), corectează-l la 60% și crește activitatea.
+2. Evită ambiguitățile. Dacă cerința e să adaugi conținut, folosește un limbaj academic, clar și structurat.
+3. Dacă adaugi sau modifici bibliografia, asigură-te că adaugi cel puțin o lucrare recentă (din ultimii 5 ani).
+4. Respectă integral formatul original al documentului (dacă primești cod LaTeX, returnează cod LaTeX valid; dacă e text simplu, returnează text).
+5. Nu trunchia documentul! Returnează fișierul complet, de la cap la coadă.
+
+DOCUMENT ORIGINAL:
+{fileContent}
+
+IMPORTANT: Returnează DOAR conținutul modificat. Fără nicio introducere, salut sau tag-uri markdown (fără ```latex sau ```).
+";
+
+            var requestBody = new
+            {
+                contents = new[] {
+                    new { parts = new[] { new { text = prompt } } }
+                },
+                generationConfig = new
+                {
+                    temperature = 0.3, // Un pic de creativitate pentru reformulări
+                    maxOutputTokens = 8192
+                }
+            };
+
+            var content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(requestBody), System.Text.Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync($"{GeminiApiUrl}?key={GoogleApiKey}", content);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                string error = await response.Content.ReadAsStringAsync();
+                throw new Exception($"Eroare API Gemini: {error}");
+            }
+
+            dynamic result = Newtonsoft.Json.JsonConvert.DeserializeObject(await response.Content.ReadAsStringAsync());
+            string modifiedCode = (string)result.candidates[0].content.parts[0].text;
+
+            // Curățare sigură
+            modifiedCode = modifiedCode.Trim();
+            if (modifiedCode.StartsWith("```latex")) modifiedCode = modifiedCode.Substring(8);
+            if (modifiedCode.StartsWith("```text")) modifiedCode = modifiedCode.Substring(7);
+            if (modifiedCode.StartsWith("```")) modifiedCode = modifiedCode.Substring(3);
+            if (modifiedCode.EndsWith("```")) modifiedCode = modifiedCode.Substring(0, modifiedCode.Length - 3);
+
+            return modifiedCode.Trim();
+        }
     }
 }
