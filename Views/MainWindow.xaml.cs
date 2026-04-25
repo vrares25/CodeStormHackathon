@@ -1,12 +1,10 @@
 ﻿using CodeStormHackathon.Models;
 using CodeStormHackathon.Services;
+using MaterialDesignThemes.Wpf;
 using Newtonsoft.Json;
-using SistemAcademic.Services;
-using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
 
 namespace CodeStormHackathon.Views
@@ -20,7 +18,24 @@ namespace CodeStormHackathon.Views
         private List<SyllabusData> _extractedSubjectsList;
         private string _chatContext = "";
 
-        public MainWindow() { InitializeComponent(); }
+        public MainWindow()
+        {
+            InitializeComponent();
+
+            ShowEmptyState("Încarcă documentele și rulează un audit pentru a vedea raportul de conformitate.",
+                           PackIconKind.FileDocumentOutline, Brushes.LightGray);
+
+            ShowChatEmptyState();
+
+            ChatInput.KeyDown += (s, e) =>
+            {
+                if (e.Key == System.Windows.Input.Key.Enter)
+                {
+                    e.Handled = true;
+                    BtnSendCopilot_Click(s, new RoutedEventArgs());
+                }
+            };
+        }
 
         // ─────────────────────────────────────────────────────────────────
         // Buton principal: EXECUTE AI ACADEMIC AUDIT
@@ -28,69 +43,139 @@ namespace CodeStormHackathon.Views
         // ─────────────────────────────────────────────────────────────────
         private async void BtnAiAnalysis_Click(object sender, RoutedEventArgs e)
         {
-            if (string.IsNullOrEmpty(TxtPlanPath.Text) || string.IsNullOrEmpty(TxtFDPath.Text))
+            // 1. Validare inițială
+            if (TxtPlanPath.Tag == null || TxtFDPath.Tag == null)
             {
                 MessageBox.Show("Te rog selectează ambele fișiere înainte de a rula auditul.",
                     "Fișiere lipsă", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
+            // 2. Pregătire UI: Curățăm lista și adăugăm Cardul de Sumar
             ErrorsListBox.Items.Clear();
+            var summaryCard = CreateSummaryCard("🔍 ANALIZĂ ÎN CURS...");
+            ErrorsListBox.Items.Add(summaryCard);
+
             BtnAiAnalysis.IsEnabled = false;
             LoadingSpinner.Visibility = Visibility.Visible;
             StatusText.Text = "AI extrage date din documente...";
 
             try
             {
-                // ── Pasul 1: Extrage toate materiile din Fișa Disciplinei ──
-                _extractedSubjectsList = await _aiService.ExtractAllSyllabusDataAsync(TxtFDPath.Text);
+                System.Windows.Input.Mouse.OverrideCursor = System.Windows.Input.Cursors.Wait;
+                string planFullPath = TxtPlanPath.Tag.ToString();
+                string fdFullPath = TxtFDPath.Tag.ToString();
 
-                AddSectionHeader($"── Găsite {_extractedSubjectsList.Count} discipline în FD ──");
+                // ── PASUL 1: Extracție AI ──
+                _extractedSubjectsList = await _aiService.ExtractAllSyllabusDataAsync(fdFullPath);
+
+                // Actualizăm textul din cardul de sumar
+                ((summaryCard.Child as StackPanel).Children[0] as TextBlock).Text =
+                    $"📊 AUDIT FINALIZAT: {_extractedSubjectsList.Count} DISCIPLINE ANALIZATE";
+
+                // ★ NOU: Pregătim contextul textual detaliat pentru Copilot
+                System.Text.StringBuilder contextBuilder = new System.Text.StringBuilder();
+                contextBuilder.AppendLine("RAPORT DE AUDIT ACADEMIC GENERAT:");
 
                 foreach (var subject in _extractedSubjectsList)
                 {
+                    // ── PASUL 2: Header Stilizat pentru Materie ──
                     AddSectionHeader($"📋 {subject.SubjectName}");
 
-                    // ── Level 1: Validare structurală și matematică ──
-                    StatusText.Text = $"Level 1: Validare integritate — {subject.SubjectName}...";
-                    var l1Results = _validationService.RunAllChecks(subject);
-                    DisplayResults(l1Results);
+                    // Colectăm toate rezultatele într-o singură listă pentru a decide starea vizuală
+                    var allResults = new List<CodeStormHackathon.Services.ValidationResult>();
 
-                    // ── Level 2: Sincronizare cu Planul de Învățământ ──
-                    StatusText.Text = $"Level 2: Sincronizare cu Planul — {subject.SubjectName}...";
-                    var planEntry = await _aiService.ExtractFromStudyPlanAsync(
-                        TxtPlanPath.Text, subject.SubjectName);
+                    // Level 1: Integritate & Math
+                    StatusText.Text = $"Validare Level 1 — {subject.SubjectName}...";
+                    allResults.AddRange(_validationService.RunAllChecks(subject));
 
-                    var l2Results = _syncService.RunAllChecks(subject, planEntry);
-                    DisplayResults(l2Results);
+                    // Level 2: Sincronizare cu Planul
+                    StatusText.Text = $"Sincronizare Level 2 — {subject.SubjectName}...";
+                    var planEntry = await _aiService.ExtractFromStudyPlanAsync(planFullPath, subject.SubjectName);
+                    allResults.AddRange(_syncService.RunAllChecks(subject, planEntry));
+
+                    // ★ NOU: Adăugăm rezultatele (erorile, avertizările) acestei materii în contextul pentru AI
+                    contextBuilder.AppendLine($"\nDISCIPLINA: {subject.SubjectName}");
+                    foreach (var res in allResults)
+                    {
+                        contextBuilder.AppendLine($"- [{res.Severity}] {res.Message}");
+                    }
+
+                    // ── PASUL 3: Afișare inteligentă a rezultatelor ──
+                    // Dacă nu avem nicio eroare critică, afișăm „Scutul Verde” pentru această materie
+                    if (!allResults.Any(r => r.Severity == CodeStormHackathon.Services.ValidationSeverity.Error))
+                    {
+                        var successContainer = new StackPanel { Margin = new Thickness(10, 0, 10, 10) };
+                        successContainer.Children.Add(new PackIcon
+                        {
+                            Kind = PackIconKind.ShieldCheck,
+                            Foreground = Brushes.Green,
+                            HorizontalAlignment = HorizontalAlignment.Center
+                        });
+                        successContainer.Children.Add(new TextBlock
+                        {
+                            Text = "Disciplina respectă toate normele critice.",
+                            Foreground = Brushes.Green,
+                            HorizontalAlignment = HorizontalAlignment.Center,
+                            FontSize = 11,
+                            FontStyle = FontStyles.Italic
+                        });
+                        ErrorsListBox.Items.Add(successContainer);
+                    }
+
+                    // Afișăm detaliile (erori, avertizări, succese)
+                    DisplayResults(allResults);
                 }
 
-                // ── Actualizează contextul pentru Copilot ──
-                _chatContext = JsonConvert.SerializeObject(_extractedSubjectsList, Formatting.Indented);
-                StatusText.Text = $"✅ Audit complet — {_extractedSubjectsList.Count} discipline procesate.";
+                // ★ NOU: Salvăm raportul complet ca și context pentru chat
+                _chatContext = contextBuilder.ToString();
+
+                StatusText.Text = $"✅ Audit complet.";
             }
             catch (Exception ex)
             {
-                AddResult(ValidationResult.Error("SISTEM", $"Eroare neașteptată: {ex.Message}"));
+                AddResult(CodeStormHackathon.Services.ValidationResult.Error("SISTEM", $"Eroare: {ex.Message}"));
                 StatusText.Text = "❌ Eroare la procesare.";
             }
             finally
             {
+                System.Windows.Input.Mouse.OverrideCursor = null;
                 BtnAiAnalysis.IsEnabled = true;
                 LoadingSpinner.Visibility = Visibility.Collapsed;
             }
         }
 
+        // Helper pentru crearea cardului de sumar la începutul listei
+        private Border CreateSummaryCard(string text)
+        {
+            var border = new Border
+            {
+                Background = new SolidColorBrush(Color.FromRgb(249, 250, 251)),
+                CornerRadius = new CornerRadius(8),
+                Padding = new Thickness(15),
+                Margin = new Thickness(0, 0, 0, 10),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(229, 231, 235)),
+                BorderThickness = new Thickness(1)
+            };
+
+            var stack = new StackPanel();
+            stack.Children.Add(new TextBlock { Text = text, FontWeight = FontWeights.Bold, HorizontalAlignment = HorizontalAlignment.Center, Foreground = Brushes.Indigo });
+
+            border.Child = stack;
+            return border;
+        }
+
         // ─────────────────────────────────────────────────────────────────
         // Afișează o listă de ValidationResult în ListBox cu culori
         // ─────────────────────────────────────────────────────────────────
-        private void DisplayResults(List<ValidationResult> results)
+        private void DisplayResults(List<CodeStormHackathon.Services.ValidationResult> results)
         {
             foreach (var result in results)
                 AddResult(result);
+            ErrorsListBox.ScrollIntoView(ErrorsListBox.Items[ErrorsListBox.Items.Count - 1]);
         }
 
-        private void AddResult(ValidationResult result)
+        private void AddResult(CodeStormHackathon.Services.ValidationResult result)
         {
             var tb = new System.Windows.Controls.TextBlock
             {
@@ -119,19 +204,29 @@ namespace CodeStormHackathon.Views
 
         private void AddSectionHeader(string text)
         {
+            var border = new System.Windows.Controls.Border
+            {
+                Background = new SolidColorBrush(Color.FromRgb(238, 242, 255)), // Indigo foarte deschis
+                BorderBrush = new SolidColorBrush(Color.FromRgb(199, 210, 254)),
+                BorderThickness = new Thickness(0, 0, 0, 1),
+                Padding = new Thickness(10, 8, 10, 8),
+                Margin = new Thickness(0, 15, 0, 5),
+                CornerRadius = new CornerRadius(4)
+            };
+
             var tb = new System.Windows.Controls.TextBlock
             {
-                Text = text,
+                Text = text.ToUpper(),
                 FontWeight = FontWeights.Bold,
-                Foreground = new SolidColorBrush(Color.FromRgb(99, 102, 241)),
-                Margin = new Thickness(2, 8, 2, 2)
+                FontSize = 12,
+                Foreground = new SolidColorBrush(Color.FromRgb(67, 56, 202)),
             };
-            ErrorsListBox.Items.Add(tb);
+
+            border.Child = tb;
+            ErrorsListBox.Items.Add(border);
         }
 
-        // ─────────────────────────────────────────────────────────────────
-        // AI Copilot
-        // ─────────────────────────────────────────────────────────────────
+        #region Copilot region
         private async void BtnSendCopilot_Click(object sender, RoutedEventArgs e)
         {
             if (string.IsNullOrEmpty(ChatInput.Text)) return;
@@ -158,27 +253,45 @@ namespace CodeStormHackathon.Views
 
         private void AddChatMessage(string sender, string message)
         {
-            var panel = new System.Windows.Controls.StackPanel { Margin = new Thickness(5) };
+            bool isUser = sender == "Tu";
 
-            var senderBlock = new System.Windows.Controls.TextBlock
+            // Containerul principal pentru mesaj
+            var bubble = new System.Windows.Controls.Border
             {
-                Text = sender,
-                FontWeight = FontWeights.Bold,
-                Foreground = sender == "Tu"
-                    ? new SolidColorBrush(Color.FromRgb(99, 102, 241))
-                    : new SolidColorBrush(Color.FromRgb(16, 185, 129))
+                Padding = new Thickness(12, 8, 12, 8),
+                Margin = new Thickness(isUser ? 50 : 5, 5, isUser ? 5 : 50, 5),
+                CornerRadius = isUser ? new CornerRadius(15, 15, 2, 15) : new CornerRadius(15, 15, 15, 2),
+                Background = isUser
+                    ? new SolidColorBrush(Color.FromRgb(99, 102, 241)) // Indigo pentru utilizator
+                    : new SolidColorBrush(Color.FromRgb(243, 244, 246)), // Gri deschis pentru AI
+                HorizontalAlignment = isUser ? HorizontalAlignment.Right : HorizontalAlignment.Left,
+                Effect = new System.Windows.Media.Effects.DropShadowEffect
+                {
+                    BlurRadius = 5,
+                    ShadowDepth = 1,
+                    Opacity = 0.1
+                }
             };
 
-            var messageBlock = new System.Windows.Controls.TextBlock
+            var textBlock = new System.Windows.Controls.TextBlock
             {
                 Text = message,
-                TextWrapping = TextWrapping.Wrap
+                TextWrapping = TextWrapping.Wrap,
+                Foreground = isUser ? Brushes.White : new SolidColorBrush(Color.FromRgb(31, 41, 55)),
+                FontSize = 13
             };
 
-            panel.Children.Add(senderBlock);
-            panel.Children.Add(messageBlock);
-            ChatDisplay.Children.Add(panel);
+            bubble.Child = textBlock;
+
+            // Adăugăm bula în panoul de chat
+            ChatDisplay.Children.Add(bubble);
+
+            // Auto-scroll la ultimul mesaj
+            var scrollViewer = ChatDisplay.Parent as System.Windows.Controls.ScrollViewer;
+            scrollViewer?.ScrollToBottom();
         }
+
+        #endregion
 
         // ─────────────────────────────────────────────────────────────────
         // Export / Migrare pe template nou (Level 4)
@@ -228,62 +341,160 @@ namespace CodeStormHackathon.Views
             }
         }
 
-        // ─────────────────────────────────────────────────────────────────
-        // Drag & Drop + Browse
-        // ─────────────────────────────────────────────────────────────────
-        private void FileDragOver(object s, DragEventArgs e) =>
-            e.Effects = DragDropEffects.Copy;
+        #region Drag&Drop and Browse
+        private void FileDragOver(object s, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+                e.Effects = DragDropEffects.Copy;
+            else
+                e.Effects = DragDropEffects.None;
+            e.Handled = true;
+        }
 
         private void FileDropPlan(object s, DragEventArgs e)
         {
             if (e.Data.GetDataPresent(DataFormats.FileDrop))
-                TxtPlanPath.Text = ((string[])e.Data.GetData(DataFormats.FileDrop))[0];
+            {
+                string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
+                if (files?.Length > 0)
+                {
+                    TxtPlanPath.Tag = files[0];
+                    TxtPlanPath.Text = System.IO.Path.GetFileName(files[0]);
+                }
+            }
         }
 
         private void FileDropFD(object s, DragEventArgs e)
         {
             if (e.Data.GetDataPresent(DataFormats.FileDrop))
-                TxtFDPath.Text = ((string[])e.Data.GetData(DataFormats.FileDrop))[0];
+            {
+                string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
+                if (files?.Length > 0)
+                {
+                    TxtFDPath.Tag = files[0];
+                    TxtFDPath.Text = System.IO.Path.GetFileName(files[0]);
+                }
+            }
         }
 
         private void BtnBrowsePlan_Click(object sender, RoutedEventArgs e)
         {
             var dlg = new Microsoft.Win32.OpenFileDialog
             {
-                Filter = "PDF Files (*.pdf)|*.pdf|All Files (*.*)|*.*"
+                Filter = "PDF Files (*.pdf)|*.pdf|All Files (*.*)|*.*",
+                Title = "Selectează Planul de Învățământ"
             };
+
             if (dlg.ShowDialog() == true)
-                TxtPlanPath.Text = dlg.FileName;
+            {
+                TxtPlanPath.Tag = dlg.FileName;
+                TxtPlanPath.Text = System.IO.Path.GetFileName(dlg.FileName);
+            }
         }
 
         private void BtnBrowseFD_Click(object sender, RoutedEventArgs e)
         {
             var dlg = new Microsoft.Win32.OpenFileDialog
             {
-                Filter = "Academic Documents (*.pdf;*.docx)|*.pdf;*.docx|Images (*.jpg;*.png)|*.jpg;*.png"
+                Filter = "Academic Documents (*.pdf;*.docx)|*.pdf;*.docx|Images (*.jpg;*.png)|*.jpg;*.png",
+                Title = "Selectează Fișa Disciplinei"
             };
+
             if (dlg.ShowDialog() == true)
-                TxtFDPath.Text = dlg.FileName;
+            {
+                TxtFDPath.Tag = dlg.FileName;
+                TxtFDPath.Text = System.IO.Path.GetFileName(dlg.FileName);
+            }
         }
+
+        #endregion
 
         private void BtnOpenDiff_Click(object sender, RoutedEventArgs e)
         {
-            // VARIANTA A: Dacă există deja date extrase din audit,
-            // trimitem prima disciplină extrasă și deschidem fereastra direct (fără AI extra)
-            if (_extractedSubjectsList != null && _extractedSubjectsList.Count >= 2)
+            var diffWindow = new DiffWindow();
+
+            // UX Bonus: Dacă utilizatorul a încărcat deja o Fișă a Disciplinei 
+            // în fereastra principală, o precompletăm automat ca fiind "Versiunea Nouă"
+            // pentru a-i salva un click. El trebuie doar să caute Versiunea Veche.
+            if (TxtFDPath.Tag != null)
             {
-                // Comparăm prima cu a doua disciplină extrasă (ex: 2 ani diferiți)
-                var diffWindow = new DiffWindow(
-                    _extractedSubjectsList[0],
-                    _extractedSubjectsList[1]);
-                diffWindow.Show();
+                diffWindow.TxtNewPath.Text = TxtFDPath.Tag.ToString();
             }
-            else
+
+            diffWindow.Show();
+        }
+
+        // ─────────────────────────────────────────────────────────────────
+        // HELPERS VIZUALI (Reparați pentru C#)
+        // ─────────────────────────────────────────────────────────────────
+
+        private void ShowEmptyState(string message, PackIconKind iconKind, Brush color)
+        {
+            ErrorsListBox.Items.Clear();
+
+            // StackPanel trebuie să vină din System.Windows.Controls
+            var container = new System.Windows.Controls.StackPanel
             {
-                // VARIANTA B: Deschidem fereastra goală — userul selectează 2 fișiere manual
-                var diffWindow = new DiffWindow();
-                diffWindow.Show();
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 40, 0, 0)
+            };
+
+            // PackIcon nu are nevoie de prefixul materialDesign: în C#
+            container.Children.Add(new PackIcon
+            {
+                Kind = iconKind,
+                Width = 80,
+                Height = 80,
+                Foreground = color,
+                HorizontalAlignment = HorizontalAlignment.Center
+            });
+
+            container.Children.Add(new System.Windows.Controls.TextBlock
+            {
+                Text = message,
+                Foreground = Brushes.Gray,
+                FontSize = 16,
+                FontWeight = FontWeights.SemiBold,
+                Margin = new Thickness(0, 15, 0, 0),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                TextAlignment = TextAlignment.Center,
+                TextWrapping = TextWrapping.Wrap
+            });
+
+            ErrorsListBox.Items.Add(container);
+        }
+
+        private void RunBusinessValidations(SyllabusData data)
+        {
+            // Apelăm serviciul tău de validare existent
+            var errors = _validationService.RunAllChecks(data);
+
+            if (errors == null || errors.Count == 0 || !errors.Any(x => x.Severity == ValidationSeverity.Error))
+            {
+                // PackIconKind.ShieldCheck este enumerarea corectă
+                ShowEmptyState("Documentul este perfect conform!\nNu au fost detectate erori critice.",
+                               PackIconKind.ShieldCheck,
+                               new SolidColorBrush(Color.FromRgb(16, 185, 129))); // Verde smarald
             }
+
+            // Indiferent dacă avem succes sau nu, afișăm rezultatele detaliate sub empty state
+            DisplayResults(errors);
+        }
+
+        private void ShowChatEmptyState()
+        {
+            ChatDisplay.Children.Clear();
+            var welcome = new System.Windows.Controls.TextBlock
+            {
+                Text = "👋 Bună! Sunt asistentul tău academic.\nÎncarcă documentele și pune-mi orice întrebare despre conformitatea lor.",
+                TextAlignment = TextAlignment.Center,
+                Foreground = Brushes.Gray,
+                FontStyle = FontStyles.Italic,
+                Margin = new Thickness(20, 100, 20, 0),
+                TextWrapping = TextWrapping.Wrap
+            };
+            ChatDisplay.Children.Add(welcome);
         }
     }
 }

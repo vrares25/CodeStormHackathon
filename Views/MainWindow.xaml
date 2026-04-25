@@ -75,7 +75,7 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <Button x:Name="BtnAiAnalysis" Grid.Row="0" Click="BtnAiAnalysis_Click" Margin="0,0,0,15" Height="55" 
+                <Button x:Name="BtnAiAnalysis" ToolTip ="Pornește extracția datelor și rulează regulile de validare" Grid.Row="0" Click="BtnAiAnalysis_Click" Margin="0,0,0,15" Height="55" 
                         Style="{StaticResource MaterialDesignRaisedButton}" materialDesign:ButtonAssist.CornerRadius="8"
                         Background="#6366F1" BorderBrush="#6366F1" Foreground="White">
                     <StackPanel Orientation="Horizontal">
@@ -103,7 +103,7 @@
                     </Button>
 
                     <!-- ★ BUTON NOU: Syllabus Diff ★ -->
-                    <Button x:Name="BtnOpenDiff" Click="BtnOpenDiff_Click" Height="50"
+                    <Button x:Name="BtnOpenDiff" ToolTip ="Deschide fereastra de comparație între versiunea veche și cea curentă a fișei" Click="BtnOpenDiff_Click" Height="50"
                             Style="{StaticResource MaterialDesignRaisedButton}"
                             Background="#F59E0B" BorderBrush="#F59E0B" Foreground="White"
                             materialDesign:ButtonAssist.CornerRadius="8">

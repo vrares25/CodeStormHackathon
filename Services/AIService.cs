@@ -8,12 +8,12 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SistemAcademic.Services
+namespace CodeStormHackathon.Services
 {
     public class AIService
     {
         private readonly HttpClient _httpClient;
-        private const string GoogleApiKey = "AIzaSyB8j1yTGc7Jf7LLO1IDZfe5tvaHD6SNhPU"; // <<< cheia ta aici
+        private const string GoogleApiKey = ""; // <<< cheia ta aici
         private const string GeminiApiUrl =
             "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent";
 
@@ -36,7 +36,7 @@ namespace SistemAcademic.Services
             // PROMPT FIX: limitat la 2 materii si cerem concizie pentru a reduce riscul de depasire a tokenilor
             string prompt = @"
 Ești un sistem de extracție a datelor academice. 
-IMPORTANT: Analizează documentul și extrage date DOAR pentru PRIMELE 2 MATERII identificate.
+IMPORTANT: Analizează documentul și extrage date DOAR pentru PRIMELE 8 MATERII identificata.
 
 REGULI DE INTEGRITATE:
 1. Returnează EXCLUSIV un array JSON valid. Fără text, fără markdown block.
@@ -276,17 +276,18 @@ JSON obligatoriu:
             string newJson = JsonConvert.SerializeObject(newData);
 
             string prompt = $@"
-        Ești un expert în audit academic. Compară aceste două structuri de date (Versiunea Veche vs Versiunea Nouă).
-        
-        DATE VECHI: {oldJson}
-        DATE NOI: {newJson}
+        Acționează ca un Specialist în Versionare Curriculară. 
+        Sarcina ta este să generezi o 'Analiză Comparativă a Versiunilor' între datele de mai jos.
 
-        Sarcina ta: Generează un 'Delta Report' scurt și profesional.
-        1. Identifică schimbările critice (ex: scăderi de credite, modificări de ponderi).
-        2. Dacă 'FinalExamWeight' s-a schimbat, menționează dacă respectă regula de maxim 60%.
-        3. Rezumă ce teme noi au apărut în capitolul de curs.
+        DATE VERSIUNE VECHE: {oldJson}
+        DATE VERSIUNE NOUĂ: {newJson}
+
+        Sarcina ta:
+        1. Identifică obiectiv schimbările dintre cele două versiuni (ex: modificări de credite, ore sau ponderi).
+        2. Rezumă noutățile din capitolele de curs sau competențe.
+        3. NU face aprecieri critice sau validări față de regulamente (nu ești auditor aici).
         
-        Folosește bullet points și un ton academic.";
+        Folosește un ton neutru, academic și bullet points.";
 
             var requestBody = new
             {

@@ -13,16 +13,11 @@
     <Grid Margin="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <!-- Header: selectare fisiere -->
             <RowDefinition Height="Auto"/>
-            <!-- Legenda culori -->
             <RowDefinition Height="Auto"/>
-            <!-- Sumar -->
             <RowDefinition Height="*"/>
-            <!-- Continut diff -->
         </Grid.RowDefinitions>
 
-        <!-- ── HEADER: Selectare fișie re ── -->
         <GroupBox Grid.Row="0" Header="Selectează documentele pentru comparație"
                   Style="{StaticResource MaterialDesignCardGroupBox}"
                   materialDesign:ColorZoneAssist.Mode="PrimaryLight"
@@ -35,46 +30,34 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- FD Veche -->
                 <StackPanel Grid.Column="0">
                     <TextBlock Text="📄 FD Versiune Veche (Referință)" FontWeight="SemiBold"
                                Foreground="#EF4444" Margin="0,0,0,6"/>
-                    <DockPanel>
-                        <Button x:Name="BtnBrowseOld" Content="Caută..."
-                                Click="BtnBrowseOld_Click"
-                                DockPanel.Dock="Right" Margin="8,0,0,0"
-                                Style="{StaticResource MaterialDesignFlatMidBgButton}"/>
+                    <DockPanel Background="Transparent" AllowDrop="True" PreviewDragOver="FileDragOver" PreviewDrop="FileDropOld">
+                        <Button x:Name="BtnBrowseOld" Content="Caută..." Click="BtnBrowseOld_Click"
+            DockPanel.Dock="Right" Margin="8,0,0,0" Style="{StaticResource MaterialDesignFlatMidBgButton}"/>
                         <TextBox x:Name="TxtOldPath" IsReadOnly="True"
-                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                 materialDesign:HintAssist.Hint="FD din anul precedent..."
-                                 AllowDrop="True" PreviewDragOver="FileDragOver"
-                                 PreviewDrop="FileDropOld"/>
+             Style="{StaticResource MaterialDesignOutlinedTextBox}"
+             materialDesign:HintAssist.Hint="FD din anul precedent..."/>
                     </DockPanel>
                 </StackPanel>
 
-                <!-- Săgeată -->
                 <TextBlock Grid.Column="1" Text="→" FontSize="28"
                            HorizontalAlignment="Center" VerticalAlignment="Bottom"
                            Margin="0,0,0,8" Foreground="#6366F1"/>
 
-                <!-- FD Nouă -->
                 <StackPanel Grid.Column="2">
                     <TextBlock Text="📄 FD Versiune Nouă (Target)" FontWeight="SemiBold"
                                Foreground="#10B981" Margin="0,0,0,6"/>
-                    <DockPanel>
-                        <Button x:Name="BtnBrowseNew" Content="Caută..."
-                                Click="BtnBrowseNew_Click"
-                                DockPanel.Dock="Right" Margin="8,0,0,0"
-                                Style="{StaticResource MaterialDesignFlatMidBgButton}"/>
+                    <DockPanel Background="Transparent" AllowDrop="True" PreviewDragOver="FileDragOver" PreviewDrop="FileDropNew">
+                        <Button x:Name="BtnBrowseNew" Content="Caută..." Click="BtnBrowseNew_Click"
+            DockPanel.Dock="Right" Margin="8,0,0,0" Style="{StaticResource MaterialDesignFlatMidBgButton}"/>
                         <TextBox x:Name="TxtNewPath" IsReadOnly="True"
-                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                 materialDesign:HintAssist.Hint="FD nouă sau template completat..."
-                                 AllowDrop="True" PreviewDragOver="FileDragOver"
-                                 PreviewDrop="FileDropNew"/>
+             Style="{StaticResource MaterialDesignOutlinedTextBox}"
+             materialDesign:HintAssist.Hint="FD nouă sau template completat..."/>
                     </DockPanel>
                 </StackPanel>
 
-                <!-- Buton Analiză -->
                 <Button Grid.Column="3" x:Name="BtnRunDiff"
                         Content="▶  Analizează Diferențele"
                         Click="BtnRunDiff_Click"
@@ -86,8 +69,13 @@
             </Grid>
         </GroupBox>
 
-        <!-- ── LEGENDA ── -->
         <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
+            <CheckBox x:Name="ChkOnlyChanges" Content="Arată doar modificările" 
+                      FontWeight="Bold" Foreground="#4338CA" Margin="0,0,20,0"
+                      Checked="ChkOnlyChanges_CheckedChanged" Unchecked="ChkOnlyChanges_CheckedChanged"/>
+
+            <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="0,0,15,0"/>
+
             <TextBlock Text="Legendă: " FontWeight="SemiBold" VerticalAlignment="Center" Margin="4,0,8,0"/>
             <Border Background="#FEE2E2" CornerRadius="4" Padding="8,3" Margin="0,0,8,0">
                 <TextBlock Text="🔴 Modificat / Eliminat" Foreground="#EF4444" FontSize="12"/>
@@ -99,7 +87,6 @@
                 <TextBlock Text="⬜ Neschimbat" Foreground="#64748B" FontSize="12"/>
             </Border>
 
-            <!-- Loading spinner -->
             <ProgressBar x:Name="DiffSpinner"
                          Style="{StaticResource MaterialDesignCircularProgressBar}"
                          IsIndeterminate="True" Visibility="Collapsed"
@@ -108,14 +95,30 @@
                        Foreground="#6366F1" FontStyle="Italic"/>
         </StackPanel>
 
-        <!-- ── SUMAR ── -->
         <Border Grid.Row="2" x:Name="SummaryBorder" Visibility="Collapsed"
                 Background="#EEF2FF" BorderBrush="#6366F1" BorderThickness="1"
                 CornerRadius="6" Padding="12,8" Margin="0,0,0,12">
-            <TextBlock x:Name="SummaryText" FontWeight="SemiBold" Foreground="#4338CA"/>
+            <StackPanel>
+                <DockPanel>
+                    <materialDesign:PackIcon Kind="AutoFix" Foreground="#4338CA" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBlock x:Name="TxtDiffStats" FontWeight="Bold" Foreground="#4338CA" VerticalAlignment="Center"/>
+                </DockPanel>
+
+                <Expander HorizontalAlignment="Stretch" Margin="0,4,0,0">
+                    <Expander.Header>
+                        <TextBlock Text="Vezi analiza narativă completă (AI)" FontSize="12" FontStyle="Italic" Foreground="#6366F1"/>
+                    </Expander.Header>
+                    <ScrollViewer MaxHeight="120" VerticalScrollBarVisibility="Auto">
+                        <TextBlock x:Name="SummaryText" 
+                                   TextWrapping="Wrap" 
+                                   Padding="0,8,0,0" 
+                                   Foreground="#1E293B" 
+                                   LineHeight="20"/>
+                    </ScrollViewer>
+                </Expander>
+            </StackPanel>
         </Border>
 
-        <!-- ── CONȚINUT DIFF: Side-by-side ── -->
         <Grid Grid.Row="3">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
@@ -123,30 +126,22 @@
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Coloana stângă: FD Veche -->
             <GroupBox Grid.Column="0" Style="{StaticResource MaterialDesignCardGroupBox}">
                 <GroupBox.Header>
-                    <TextBlock FontWeight="Bold" Foreground="#EF4444">
-                        📄 Versiune VECHE
-                    </TextBlock>
+                    <TextBlock FontWeight="Bold" Foreground="#EF4444">📄 Versiune VECHE</TextBlock>
                 </GroupBox.Header>
-                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <ScrollViewer x:Name="OldScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <StackPanel x:Name="OldPanel" Margin="8"/>
                 </ScrollViewer>
             </GroupBox>
 
-            <!-- Separator -->
-            <GridSplitter Grid.Column="1" Width="8" HorizontalAlignment="Stretch"
-                          Background="Transparent" Cursor="SizeWE"/>
+            <GridSplitter Grid.Column="1" Width="8" HorizontalAlignment="Stretch" Background="Transparent" Cursor="SizeWE"/>
 
-            <!-- Coloana dreaptă: FD Nouă -->
             <GroupBox Grid.Column="2" Style="{StaticResource MaterialDesignCardGroupBox}">
                 <GroupBox.Header>
-                    <TextBlock FontWeight="Bold" Foreground="#10B981">
-                        📄 Versiune NOUĂ
-                    </TextBlock>
+                    <TextBlock FontWeight="Bold" Foreground="#10B981">📄 Versiune NOUĂ</TextBlock>
                 </GroupBox.Header>
-                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <ScrollViewer x:Name="NewScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <StackPanel x:Name="NewPanel" Margin="8"/>
                 </ScrollViewer>
             </GroupBox>

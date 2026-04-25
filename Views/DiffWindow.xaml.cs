@@ -1,8 +1,7 @@
 ﻿using CodeStormHackathon.Models;
 using CodeStormHackathon.Services;
-using SistemAcademic.Services;
 using System;
-using System.Threading.Tasks;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -14,17 +13,25 @@ namespace CodeStormHackathon.Views
         private readonly AIService _aiService = new AIService();
         private readonly SyllabusDiffService _diffService = new SyllabusDiffService();
 
-        // Dacă se deschide fereastra cu date deja extrase din MainWindow,
-        // le folosim direct fără a mai apela Gemini
         private SyllabusData _preloadedOld;
         private SyllabusData _preloadedNew;
+        private SyllabusDiffReport _currentReport;
 
         public DiffWindow()
         {
             InitializeComponent();
+
+            // Logica de Sync Scroll
+            OldScroll.ScrollChanged += (s, e) => {
+                NewScroll.ScrollToVerticalOffset(OldScroll.VerticalOffset);
+            };
+            NewScroll.ScrollChanged += (s, e) => {
+                OldScroll.ScrollToVerticalOffset(NewScroll.VerticalOffset);
+            };
+
+            this.KeyDown += (s, e) => { if (e.Key == System.Windows.Input.Key.Escape) this.Close(); };
         }
 
-        // Constructor alternativ: primește datele deja extrase
         public DiffWindow(SyllabusData oldData, SyllabusData newData) : this()
         {
             _preloadedOld = oldData;
@@ -33,9 +40,14 @@ namespace CodeStormHackathon.Views
             TxtNewPath.Text = $"[Date preîncărcate: {newData?.SubjectName}]";
         }
 
-        // ─────────────────────────────────────────────────────────────────
-        // Buton Analizează Diferențele
-        // ─────────────────────────────────────────────────────────────────
+        private void ChkOnlyChanges_CheckedChanged(object sender, RoutedEventArgs e)
+        {
+            if (_currentReport != null)
+            {
+                RenderDiff(_currentReport);
+            }
+        }
+
         private async void BtnRunDiff_Click(object sender, RoutedEventArgs e)
         {
             OldPanel.Children.Clear();
@@ -44,7 +56,8 @@ namespace CodeStormHackathon.Views
 
             BtnRunDiff.IsEnabled = false;
             DiffSpinner.Visibility = Visibility.Visible;
-            StatusInfoText.Text = "Se extrag datele...";
+            StatusInfoText.Text = "Se procesează documentele...";
+            System.Windows.Input.Mouse.OverrideCursor = System.Windows.Input.Cursors.Wait;
 
             try
             {
@@ -53,13 +66,11 @@ namespace CodeStormHackathon.Views
 
                 if (_preloadedOld != null && _preloadedNew != null)
                 {
-                    // Folosim datele preîncărcate din MainWindow
                     oldFd = _preloadedOld;
                     newFd = _preloadedNew;
                 }
                 else
                 {
-                    // Trebuie să extragă din fișiere via AI
                     if (string.IsNullOrEmpty(TxtOldPath.Text) || string.IsNullOrEmpty(TxtNewPath.Text))
                     {
                         MessageBox.Show("Te rog selectează ambele fișiere pentru comparație.",
@@ -67,86 +78,118 @@ namespace CodeStormHackathon.Views
                         return;
                     }
 
-                    StatusInfoText.Text = "Extrag FD Veche...";
+                    StatusInfoText.Text = "Extrag datele prin AI...";
                     var oldList = await _aiService.ExtractAllSyllabusDataAsync(TxtOldPath.Text);
                     oldFd = oldList?.Count > 0 ? oldList[0] : null;
 
-                    StatusInfoText.Text = "Extrag FD Nouă...";
                     var newList = await _aiService.ExtractAllSyllabusDataAsync(TxtNewPath.Text);
                     newFd = newList?.Count > 0 ? newList[0] : null;
                 }
 
                 if (oldFd == null || newFd == null)
                 {
-                    StatusInfoText.Text = "❌ Nu s-au putut extrage datele din documente.";
+                    StatusInfoText.Text = "❌ Nu s-au putut extrage datele.";
                     return;
                 }
 
                 StatusInfoText.Text = "Se calculează diferențele...";
                 var report = _diffService.Compare(oldFd, newFd);
 
+                _currentReport = report; // Salvăm raportul pentru filtru
                 RenderDiff(report);
 
-                // Sumar
-                StatusInfoText.Text = "AI-ul genereaza explicatia narativa...";
+                StatusInfoText.Text = "AI-ul generează explicația narativă...";
                 string narrativeReport = await _aiService.GetNarrativeDeltaReportAsync(oldFd, newFd);
+
+                TxtDiffStats.Text = report.HasChanges
+                    ? $"⚡ {report.TotalChanges} MODIFICĂRI DETECTATE"
+                    : "✅ DOCUMENTE IDENTICE";
+
                 SummaryText.Text = narrativeReport;
                 SummaryBorder.Visibility = Visibility.Visible;
-                if (report.HasChanges)
-                    SummaryText.Text = $"⚡ {report.TotalChanges} modificări detectate între cele două versiuni.";
-                else
-                    SummaryText.Text = "✅ Documentele sunt identice — nicio diferență detectată.";
 
                 StatusInfoText.Text = report.HasChanges
                     ? $"Diff complet — {report.TotalChanges} modificări."
-                    : "Diff complet — documente identice.";
+                    : "Diff complet — nicio modificare.";
             }
             catch (Exception ex)
             {
                 StatusInfoText.Text = $"❌ Eroare: {ex.Message}";
+                MessageBox.Show($"Eroare la procesarea diff-ului: {ex.Message}", "Eroare", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
                 BtnRunDiff.IsEnabled = true;
                 DiffSpinner.Visibility = Visibility.Collapsed;
+                System.Windows.Input.Mouse.OverrideCursor = null;
             }
         }
 
-        // ─────────────────────────────────────────────────────────────────
-        // Randează raportul de diff în cele 2 paneluri
-        // ─────────────────────────────────────────────────────────────────
         private void RenderDiff(SyllabusDiffReport report)
         {
-            // ── Câmpuri scalare ──
+            OldPanel.Children.Clear();
+            NewPanel.Children.Clear();
+
+            bool showOnlyChanges = ChkOnlyChanges.IsChecked == true;
+
+            // ────────────────────────────────────────────────────────
+            // 1. CÂMPURI PRINCIPALE
+            // ────────────────────────────────────────────────────────
             AddSectionHeader(OldPanel, "📋 Câmpuri Principale");
             AddSectionHeader(NewPanel, "📋 Câmpuri Principale");
 
-            foreach (var field in report.FieldDiffs)
+            var visibleFields = showOnlyChanges
+                ? report.FieldDiffs.Where(f => f.Status != DiffStatus.Unchanged).ToList()
+                : report.FieldDiffs;
+
+            if (report.FieldDiffs.Count > 0 && visibleFields.Count == 0)
             {
-                AddFieldRow(OldPanel, field.FieldName, field.OldValue, field.Status, isOldSide: true);
-                AddFieldRow(NewPanel, field.FieldName, field.NewValue, field.Status, isOldSide: false);
+                AddSuccessState(OldPanel, "Nicio modificare la datele generale.");
+                AddSuccessState(NewPanel, "Nicio modificare la datele generale.");
+            }
+            else
+            {
+                foreach (var field in visibleFields)
+                {
+                    AddFieldRow(OldPanel, field.FieldName, field.OldValue, field.NewValue, field.Status, isOldSide: true);
+                    AddFieldRow(NewPanel, field.FieldName, field.OldValue, field.NewValue, field.Status, isOldSide: false);
+                }
             }
 
-            // ── Capitole curs ──
+            // ────────────────────────────────────────────────────────
+            // 2. CAPITOLE (TEMATICĂ)
+            // ────────────────────────────────────────────────────────
             AddSectionHeader(OldPanel, "📖 Tematică Curs (Capitole)");
             AddSectionHeader(NewPanel, "📖 Tematică Curs (Capitole)");
 
-            foreach (var item in report.ChapterDiffs)
+            var visibleChapters = showOnlyChanges
+                ? report.ChapterDiffs.Where(c => c.Status != DiffStatus.Unchanged).ToList()
+                : report.ChapterDiffs;
+
+            if (report.ChapterDiffs.Count > 0 && visibleChapters.Count == 0)
             {
-                if (item.Status == DiffStatus.Removed)
+                AddSuccessState(OldPanel, "Structura cursului este identică.");
+                AddSuccessState(NewPanel, "Structura cursului este identică.");
+            }
+            else
+            {
+                foreach (var item in visibleChapters)
                 {
-                    AddListItem(OldPanel, item.Content, DiffStatus.Removed);
-                    AddPlaceholder(NewPanel, "(capitol eliminat)");
-                }
-                else if (item.Status == DiffStatus.Added)
-                {
-                    AddPlaceholder(OldPanel, "(capitol nou)");
-                    AddListItem(NewPanel, item.Content, DiffStatus.Added);
-                }
-                else
-                {
-                    AddListItem(OldPanel, item.Content, DiffStatus.Unchanged);
-                    AddListItem(NewPanel, item.Content, DiffStatus.Unchanged);
+                    if (item.Status == DiffStatus.Removed)
+                    {
+                        AddListItem(OldPanel, item.Content, DiffStatus.Removed);
+                        AddPlaceholder(NewPanel, "(capitol eliminat)");
+                    }
+                    else if (item.Status == DiffStatus.Added)
+                    {
+                        AddPlaceholder(OldPanel, "(capitol nou)");
+                        AddListItem(NewPanel, item.Content, DiffStatus.Added);
+                    }
+                    else
+                    {
+                        AddListItem(OldPanel, item.Content, DiffStatus.Unchanged);
+                        AddListItem(NewPanel, item.Content, DiffStatus.Unchanged);
+                    }
                 }
             }
 
@@ -156,26 +199,40 @@ namespace CodeStormHackathon.Views
                 AddPlaceholder(NewPanel, "— Nicio temă extrasă —");
             }
 
-            // ── Competențe ──
+            // ────────────────────────────────────────────────────────
+            // 3. COMPETENȚE
+            // ────────────────────────────────────────────────────────
             AddSectionHeader(OldPanel, "🎯 Competențe (CP / CT)");
             AddSectionHeader(NewPanel, "🎯 Competențe (CP / CT)");
 
-            foreach (var item in report.CompetencyDiffs)
+            var visibleComps = showOnlyChanges
+                ? report.CompetencyDiffs.Where(c => c.Status != DiffStatus.Unchanged).ToList()
+                : report.CompetencyDiffs;
+
+            if (report.CompetencyDiffs.Count > 0 && visibleComps.Count == 0)
             {
-                if (item.Status == DiffStatus.Removed)
+                AddSuccessState(OldPanel, "Competențele au rămas neschimbate.");
+                AddSuccessState(NewPanel, "Competențele au rămas neschimbate.");
+            }
+            else
+            {
+                foreach (var item in visibleComps)
                 {
-                    AddListItem(OldPanel, item.Content, DiffStatus.Removed);
-                    AddPlaceholder(NewPanel, "(competență eliminată)");
-                }
-                else if (item.Status == DiffStatus.Added)
-                {
-                    AddPlaceholder(OldPanel, "(competență nouă)");
-                    AddListItem(NewPanel, item.Content, DiffStatus.Added);
-                }
-                else
-                {
-                    AddListItem(OldPanel, item.Content, DiffStatus.Unchanged);
-                    AddListItem(NewPanel, item.Content, DiffStatus.Unchanged);
+                    if (item.Status == DiffStatus.Removed)
+                    {
+                        AddListItem(OldPanel, item.Content, DiffStatus.Removed);
+                        AddPlaceholder(NewPanel, "(competență eliminată)");
+                    }
+                    else if (item.Status == DiffStatus.Added)
+                    {
+                        AddPlaceholder(OldPanel, "(competență nouă)");
+                        AddListItem(NewPanel, item.Content, DiffStatus.Added);
+                    }
+                    else
+                    {
+                        AddListItem(OldPanel, item.Content, DiffStatus.Unchanged);
+                        AddListItem(NewPanel, item.Content, DiffStatus.Unchanged);
+                    }
                 }
             }
 
@@ -207,37 +264,34 @@ namespace CodeStormHackathon.Views
             });
         }
 
-        private void AddFieldRow(StackPanel panel, string label, string value,
-            DiffStatus status, bool isOldSide)
+        private void AddFieldRow(StackPanel panel, string label, string oldValue, string newValue, DiffStatus status, bool isOldSide)
         {
-            // Determină culoarea în funcție de status și ce parte afișăm
             var (bg, fg, prefix) = GetDiffColors(status, isOldSide);
+            string currentValue = isOldSide ? oldValue : newValue;
 
             var border = new Border
             {
                 Background = bg,
-                CornerRadius = new CornerRadius(4),
-                Padding = new Thickness(8, 5, 8, 5),
-                Margin = new Thickness(0, 2, 0, 2)
+                CornerRadius = new CornerRadius(6),
+                Padding = new Thickness(10, 6, 10, 6),
+                Margin = new Thickness(0, 3, 0, 3),
+                BorderThickness = new Thickness(0)
             };
 
-            var inner = new StackPanel();
-            inner.Children.Add(new TextBlock
-            {
-                Text = label,
-                FontSize = 10,
-                Foreground = new SolidColorBrush(Color.FromRgb(100, 116, 139)),
-                FontWeight = FontWeights.SemiBold
-            });
-            inner.Children.Add(new TextBlock
-            {
-                Text = prefix + value,
-                Foreground = fg,
-                TextWrapping = TextWrapping.Wrap,
-                FontSize = 13
-            });
+            var innerStack = new StackPanel();
+            innerStack.Children.Add(new TextBlock { Text = label, FontSize = 10, Foreground = new SolidColorBrush(Color.FromRgb(100, 116, 139)), FontWeight = FontWeights.SemiBold });
 
-            border.Child = inner;
+            var valueContent = new System.Windows.Controls.TextBlock
+            {
+                TextWrapping = TextWrapping.Wrap,
+                Foreground = fg,
+                FontSize = 13
+            };
+
+            SetSmartHighlighting(valueContent, oldValue, newValue, status);
+
+            innerStack.Children.Add(valueContent);
+            border.Child = innerStack;
             panel.Children.Add(border);
         }
 
@@ -280,19 +334,37 @@ namespace CodeStormHackathon.Views
             });
         }
 
-        // Returnează (background, foreground, prefix emoji) în funcție de status
-        private (Brush bg, Brush fg, string prefix) GetDiffColors(
-            DiffStatus status, bool isOldSide)
+        private void AddSuccessState(StackPanel panel, string message)
+        {
+            panel.Children.Add(new Border
+            {
+                Background = new SolidColorBrush(Color.FromRgb(240, 253, 244)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(187, 247, 208)),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(6),
+                Padding = new Thickness(10, 15, 10, 15),
+                Margin = new Thickness(0, 5, 0, 15),
+                Child = new TextBlock
+                {
+                    Text = "✅ " + message,
+                    Foreground = new SolidColorBrush(Color.FromRgb(21, 128, 61)),
+                    FontWeight = FontWeights.SemiBold,
+                    HorizontalAlignment = HorizontalAlignment.Center
+                }
+            });
+        }
+
+        private (Brush bg, Brush fg, string prefix) GetDiffColors(DiffStatus status, bool isOldSide)
         {
             return status switch
             {
                 DiffStatus.Removed =>
-                    (new SolidColorBrush(Color.FromRgb(254, 226, 226)),  // roșu deschis
-                     new SolidColorBrush(Color.FromRgb(185, 28, 28)),    // roșu închis
+                    (new SolidColorBrush(Color.FromRgb(254, 226, 226)),
+                     new SolidColorBrush(Color.FromRgb(185, 28, 28)),
                      "🔴 "),
                 DiffStatus.Added =>
-                    (new SolidColorBrush(Color.FromRgb(220, 252, 231)),  // verde deschis
-                     new SolidColorBrush(Color.FromRgb(21, 128, 61)),    // verde închis
+                    (new SolidColorBrush(Color.FromRgb(220, 252, 231)),
+                     new SolidColorBrush(Color.FromRgb(21, 128, 61)),
                      "🟢 "),
                 DiffStatus.Modified when isOldSide =>
                     (new SolidColorBrush(Color.FromRgb(254, 226, 226)),
@@ -302,11 +374,36 @@ namespace CodeStormHackathon.Views
                     (new SolidColorBrush(Color.FromRgb(220, 252, 231)),
                      new SolidColorBrush(Color.FromRgb(21, 128, 61)),
                      "🟢 "),
-                _ =>    // Unchanged
-                    (new SolidColorBrush(Color.FromRgb(248, 250, 252)),  // gri foarte deschis
-                     new SolidColorBrush(Color.FromRgb(51, 65, 85)),     // gri închis
+                _ =>
+                    (new SolidColorBrush(Color.FromRgb(248, 250, 252)),
+                     new SolidColorBrush(Color.FromRgb(51, 65, 85)),
                      "   ")
             };
+        }
+
+        private void SetSmartHighlighting(System.Windows.Controls.TextBlock textBlock, string oldText, string newText, DiffStatus status)
+        {
+            textBlock.Inlines.Clear();
+
+            if (status == DiffStatus.Unchanged || string.IsNullOrEmpty(oldText) || string.IsNullOrEmpty(newText))
+            {
+                textBlock.Text = newText ?? oldText;
+                return;
+            }
+
+            var oldWords = oldText.Split(' ');
+            var newWords = newText.Split(' ');
+
+            foreach (var word in newWords)
+            {
+                bool isNew = !oldWords.Contains(word);
+
+                textBlock.Inlines.Add(new System.Windows.Documents.Run(word + " ")
+                {
+                    Background = isNew ? new SolidColorBrush(Color.FromArgb(80, 34, 197, 94)) : Brushes.Transparent,
+                    FontWeight = isNew ? FontWeights.Bold : FontWeights.Normal
+                });
+            }
         }
 
         // ─────────────────────────────────────────────────────────────────
@@ -332,8 +429,19 @@ namespace CodeStormHackathon.Views
             if (dlg.ShowDialog() == true) TxtNewPath.Text = dlg.FileName;
         }
 
-        private void FileDragOver(object s, DragEventArgs e) =>
-            e.Effects = DragDropEffects.Copy;
+        private void FileDragOver(object s, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                e.Effects = DragDropEffects.Copy;
+            }
+            else
+            {
+                e.Effects = DragDropEffects.None;
+            }
+
+            e.Handled = true;
+        }
 
         private void FileDropOld(object s, DragEventArgs e)
         {
