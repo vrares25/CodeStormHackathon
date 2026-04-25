@@ -288,7 +288,7 @@ namespace CodeStormHackathon.Views
                 FontSize = 13
             };
 
-            SetSmartHighlighting(valueContent, oldValue, newValue, status);
+            SetSmartHighlighting(valueContent, oldValue, newValue, status, isOldSide);
 
             innerStack.Children.Add(valueContent);
             border.Child = innerStack;
@@ -381,28 +381,48 @@ namespace CodeStormHackathon.Views
             };
         }
 
-        private void SetSmartHighlighting(System.Windows.Controls.TextBlock textBlock, string oldText, string newText, DiffStatus status)
+        private void SetSmartHighlighting(System.Windows.Controls.TextBlock textBlock, string oldText, string newText, DiffStatus status, bool isOldSide)
         {
             textBlock.Inlines.Clear();
 
+            // Dacă nu avem modificări sau lipsesc texte, afișăm doar valoarea corectă pentru partea respectivă
             if (status == DiffStatus.Unchanged || string.IsNullOrEmpty(oldText) || string.IsNullOrEmpty(newText))
             {
-                textBlock.Text = newText ?? oldText;
+                textBlock.Text = isOldSide ? (oldText ?? "") : (newText ?? "");
                 return;
             }
 
             var oldWords = oldText.Split(' ');
             var newWords = newText.Split(' ');
 
-            foreach (var word in newWords)
+            if (isOldSide)
             {
-                bool isNew = !oldWords.Contains(word);
-
-                textBlock.Inlines.Add(new System.Windows.Documents.Run(word + " ")
+                // ── PARTEA STÂNGĂ (VECHE) ──
+                // Afișăm textul vechi. Dacă un cuvânt nu mai există în textul nou, îl marcăm ca "șters" (roșu)
+                foreach (var word in oldWords)
                 {
-                    Background = isNew ? new SolidColorBrush(Color.FromArgb(80, 34, 197, 94)) : Brushes.Transparent,
-                    FontWeight = isNew ? FontWeights.Bold : FontWeights.Normal
-                });
+                    bool isRemoved = !newWords.Contains(word);
+                    textBlock.Inlines.Add(new System.Windows.Documents.Run(word + " ")
+                    {
+                        Background = isRemoved ? new SolidColorBrush(Color.FromArgb(80, 239, 68, 68)) : Brushes.Transparent, // Fundal roșiatic
+                        FontWeight = isRemoved ? FontWeights.Bold : FontWeights.Normal,
+                        TextDecorations = isRemoved ? TextDecorations.Strikethrough : null // Taie textul
+                    });
+                }
+            }
+            else
+            {
+                // ── PARTEA DREAPTĂ (NOUĂ) ──
+                // Afișăm textul nou. Dacă un cuvânt nu exista în textul vechi, îl marcăm ca "nou" (verde)
+                foreach (var word in newWords)
+                {
+                    bool isNew = !oldWords.Contains(word);
+                    textBlock.Inlines.Add(new System.Windows.Documents.Run(word + " ")
+                    {
+                        Background = isNew ? new SolidColorBrush(Color.FromArgb(80, 34, 197, 94)) : Brushes.Transparent, // Fundal verde
+                        FontWeight = isNew ? FontWeights.Bold : FontWeights.Normal
+                    });
+                }
             }
         }
 
