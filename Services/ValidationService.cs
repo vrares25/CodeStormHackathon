@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace CodeStormHackathon.Services
 {
@@ -102,13 +103,79 @@ namespace CodeStormHackathon.Services
         // ─────────────────────────────────────────────────────────────────
         // Metodă combinată: rulează toate verificările Level 1
         // ─────────────────────────────────────────────────────────────────
-        public List<ValidationResult> RunAllChecks(SyllabusData fd)
+        public List<ValidationResult> RunAllChecks(SyllabusData data)
         {
-            var all = new List<ValidationResult>();
-            all.AddRange(CheckIntegrity(fd));
-            all.AddRange(ValidateWeights(fd));
-            return all;
+            var allResults = new List<ValidationResult>();
+
+            // (Aici ai verificările tale vechi de la Nivelul 1 - Integritate & Matematică)
+            // ex: allResults.AddRange(RunMathChecker(data));
+
+            // ★ NOU: Rulăm UC 3.1 - Content Auditor ★
+            allResults.AddRange(RunContentAuditor(data));
+
+            return allResults;
         }
+
+        // UC 3.1 - Analiza Calitativă și Semantică
+        private List<ValidationResult> RunContentAuditor(SyllabusData data)
+        {
+            var results = new List<ValidationResult>();
+
+            // 1. Detectare conținut generic (Titluri vagi)
+            string[] vagueTerms = { "introducere", "curs 1", "curs 2", "proiect", "laborator", "recapitulare", "concluzii" };
+
+            if (data.CourseChapters != null && data.CourseChapters.Count > 0)
+            {
+                foreach (var chapter in data.CourseChapters)
+                {
+                    string cleanChapter = chapter.ToLower().Trim();
+                    if (vagueTerms.Any(term => cleanChapter == term || cleanChapter.StartsWith(term + ":") || cleanChapter.StartsWith(term + " -")))
+                    {
+                        results.Add(ValidationResult.Warning("CONTENT AUDITOR",
+                            $"Capitolul '{chapter}' este prea generic. Detaliați tematica (ex: nu folosiți doar cuvântul 'Introducere')."));
+                    }
+                }
+            }
+
+            // 2. Actualitatea Bibliografiei (Minim o sursă din ultimii 5 ani)
+            if (!string.IsNullOrEmpty(data.Bibliography))
+            {
+                // Căutăm ani de 4 cifre (ex: 2019, 2024)
+                var matches = Regex.Matches(data.Bibliography, @"\b(19|20)\d{2}\b");
+                bool hasRecentSource = false;
+
+                int currentYear = 2026; // Conform cerințelor și contextului actual
+
+                foreach (Match match in matches)
+                {
+                    if (int.TryParse(match.Value, out int year))
+                    {
+                        if (currentYear - year <= 5 && year <= currentYear)
+                        {
+                            hasRecentSource = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!hasRecentSource)
+                {
+                    results.Add(ValidationResult.Warning("CONTENT AUDITOR",
+                        $"Bibliografia este învechită. Nu există surse publicate în ultimii 5 ani ({currentYear - 5}-{currentYear})."));
+                }
+                else
+                {
+                    results.Add(ValidationResult.Success("CONTENT AUDITOR", "Bibliografia conține surse de actualitate."));
+                }
+            }
+            else
+            {
+                results.Add(ValidationResult.Error("CONTENT AUDITOR", "Secțiunea de Bibliografie lipsește complet."));
+            }
+
+            return results;
+        }
+
     }
 
     // ─────────────────────────────────────────────────────────────────

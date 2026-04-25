@@ -496,5 +496,10 @@ namespace CodeStormHackathon.Views
             };
             ChatDisplay.Children.Add(welcome);
         }
+
+        private void BtnOpenBulk_Click(object sender, RoutedEventArgs e)
+        {
+            new BulkUpdateWindow().Show();
+        }
     }
 }

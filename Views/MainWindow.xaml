@@ -102,6 +102,7 @@
                         </StackPanel>
                     </Button>
 
+                    <Button x:Name="BtnOpenBulk" Click="BtnOpenBulk_Click" ToolTip="Smart Updater">Actualizare Bulk</Button>
                     <!-- ★ BUTON NOU: Syllabus Diff ★ -->
                     <Button x:Name="BtnOpenDiff" ToolTip ="Deschide fereastra de comparație între versiunea veche și cea curentă a fișei" Click="BtnOpenDiff_Click" Height="50"
                             Style="{StaticResource MaterialDesignRaisedButton}"
