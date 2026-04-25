@@ -16,9 +16,19 @@ namespace CodeStormHackathon.ViewModels
         {
             var validator = new ValidationService();
             var sync = new SyncService();
+
+            // 1. Obținem erorile de integritate
             var errors = validator.CheckIntegrity(currentFd);
-            if (!validator.ValidateWeights(currentFd, out string mathMsg))
-                errors.Add(mathMsg);
+
+            // 2. Obținem erorile de calcul (Presupunând că ValidateWeights returnează List<string> acum)
+            // Dacă returnează List<ValidationResult>, folosim .Select(x => x.Message)
+            var mathErrors = validator.ValidateWeights(currentFd);
+            if (mathErrors != null && mathErrors.Any())
+            {
+                errors.AddRange(mathErrors);
+            }
+
+            // 3. Obținem conflictele de sincronizare
             var conflicts = sync.CompareWithPlan(currentFd, officialPlan);
             errors.AddRange(conflicts);
 

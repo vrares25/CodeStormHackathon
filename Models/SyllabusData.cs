@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Collections.Generic;
 
 namespace CodeStormHackathon.Models
 {
@@ -13,5 +11,6 @@ namespace CodeStormHackathon.Models
         public double FinalExamWeight { get; set; }
         public double ActivityWeight { get; set; }
         public List<string> CourseChapters { get; set; } = new List<string>();
+        public List<string> Competencies { get; set; } = new List<string>();
     }
 }

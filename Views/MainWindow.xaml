@@ -88,15 +88,33 @@
                     <ListBox x:Name="ErrorsListBox" Style="{StaticResource MaterialDesignListBox}"/>
                 </GroupBox>
 
-                <Button x:Name="BtnExportSyllabus" Grid.Row="2" Click="BtnExportSyllabus_Click" Height="50" 
-                        Style="{StaticResource MaterialDesignRaisedButton}" 
-                        Background="#10B981" BorderBrush="#10B981" Foreground="White"
-                        materialDesign:ButtonAssist.CornerRadius="8">
-                    <StackPanel Orientation="Horizontal">
-                        <materialDesign:PackIcon Kind="FileDocumentArrowRight" Width="24" Height="24" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                        <TextBlock Text="Migrare pe Template Nou (2026)" FontSize="15" FontWeight="Bold" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
+                <StackPanel Grid.Row="2" Margin="0,0,0,0">
+                    <Button x:Name="BtnExportSyllabus" Click="BtnExportSyllabus_Click" Height="50"
+                                                       Style="{StaticResource MaterialDesignRaisedButton}"
+                                                       Background="#10B981" BorderBrush="#10B981" Foreground="White"
+                                                       materialDesign:ButtonAssist.CornerRadius="8"
+                                                       Margin="0,0,0,8">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="FileDocumentArrowRight" Width="24" Height="24"
+                                     VerticalAlignment="Center" Margin="0,0,10,0"/>
+                            <TextBlock Text="Migrare pe Template Nou (2026)" FontSize="15"
+                       FontWeight="Bold" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- ★ BUTON NOU: Syllabus Diff ★ -->
+                    <Button x:Name="BtnOpenDiff" Click="BtnOpenDiff_Click" Height="50"
+                            Style="{StaticResource MaterialDesignRaisedButton}"
+                            Background="#F59E0B" BorderBrush="#F59E0B" Foreground="White"
+                            materialDesign:ButtonAssist.CornerRadius="8">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="Compare" Width="24" Height="24"
+                                     VerticalAlignment="Center" Margin="0,0,10,0"/>
+                            <TextBlock Text="Syllabus Diff (Comparație Versiuni)" FontSize="15"
+                                       FontWeight="Bold" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
             </Grid>
 
             <GroupBox Grid.Column="2" Header="AI Copilot Asistent" Style="{StaticResource MaterialDesignCardGroupBox}">

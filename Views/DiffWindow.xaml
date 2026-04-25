@@ -1,0 +1,155 @@
+﻿<Window x:Class="CodeStormHackathon.Views.DiffWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="UC 1.3 — Syllabus Diff (Comparație Fișe Disciplină)"
+        Height="750" Width="1200" MinWidth="900" MinHeight="500"
+        WindowStartupLocation="CenterScreen"
+        TextElement.Foreground="{DynamicResource MaterialDesignBody}"
+        TextElement.FontSize="13"
+        Background="{DynamicResource MaterialDesignPaper}"
+        FontFamily="{DynamicResource MaterialDesignDefaultFont}">
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <!-- Header: selectare fisiere -->
+            <RowDefinition Height="Auto"/>
+            <!-- Legenda culori -->
+            <RowDefinition Height="Auto"/>
+            <!-- Sumar -->
+            <RowDefinition Height="*"/>
+            <!-- Continut diff -->
+        </Grid.RowDefinitions>
+
+        <!-- ── HEADER: Selectare fișie re ── -->
+        <GroupBox Grid.Row="0" Header="Selectează documentele pentru comparație"
+                  Style="{StaticResource MaterialDesignCardGroupBox}"
+                  materialDesign:ColorZoneAssist.Mode="PrimaryLight"
+                  Margin="0,0,0,12">
+            <Grid Margin="10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="60"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- FD Veche -->
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="📄 FD Versiune Veche (Referință)" FontWeight="SemiBold"
+                               Foreground="#EF4444" Margin="0,0,0,6"/>
+                    <DockPanel>
+                        <Button x:Name="BtnBrowseOld" Content="Caută..."
+                                Click="BtnBrowseOld_Click"
+                                DockPanel.Dock="Right" Margin="8,0,0,0"
+                                Style="{StaticResource MaterialDesignFlatMidBgButton}"/>
+                        <TextBox x:Name="TxtOldPath" IsReadOnly="True"
+                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                 materialDesign:HintAssist.Hint="FD din anul precedent..."
+                                 AllowDrop="True" PreviewDragOver="FileDragOver"
+                                 PreviewDrop="FileDropOld"/>
+                    </DockPanel>
+                </StackPanel>
+
+                <!-- Săgeată -->
+                <TextBlock Grid.Column="1" Text="→" FontSize="28"
+                           HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                           Margin="0,0,0,8" Foreground="#6366F1"/>
+
+                <!-- FD Nouă -->
+                <StackPanel Grid.Column="2">
+                    <TextBlock Text="📄 FD Versiune Nouă (Target)" FontWeight="SemiBold"
+                               Foreground="#10B981" Margin="0,0,0,6"/>
+                    <DockPanel>
+                        <Button x:Name="BtnBrowseNew" Content="Caută..."
+                                Click="BtnBrowseNew_Click"
+                                DockPanel.Dock="Right" Margin="8,0,0,0"
+                                Style="{StaticResource MaterialDesignFlatMidBgButton}"/>
+                        <TextBox x:Name="TxtNewPath" IsReadOnly="True"
+                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                 materialDesign:HintAssist.Hint="FD nouă sau template completat..."
+                                 AllowDrop="True" PreviewDragOver="FileDragOver"
+                                 PreviewDrop="FileDropNew"/>
+                    </DockPanel>
+                </StackPanel>
+
+                <!-- Buton Analiză -->
+                <Button Grid.Column="3" x:Name="BtnRunDiff"
+                        Content="▶  Analizează Diferențele"
+                        Click="BtnRunDiff_Click"
+                        Margin="16,0,0,0" Height="40" Padding="16,0"
+                        VerticalAlignment="Bottom"
+                        Style="{StaticResource MaterialDesignRaisedButton}"
+                        Background="#6366F1" BorderBrush="#6366F1" Foreground="White"
+                        materialDesign:ButtonAssist.CornerRadius="6"/>
+            </Grid>
+        </GroupBox>
+
+        <!-- ── LEGENDA ── -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
+            <TextBlock Text="Legendă: " FontWeight="SemiBold" VerticalAlignment="Center" Margin="4,0,8,0"/>
+            <Border Background="#FEE2E2" CornerRadius="4" Padding="8,3" Margin="0,0,8,0">
+                <TextBlock Text="🔴 Modificat / Eliminat" Foreground="#EF4444" FontSize="12"/>
+            </Border>
+            <Border Background="#DCFCE7" CornerRadius="4" Padding="8,3" Margin="0,0,8,0">
+                <TextBlock Text="🟢 Adăugat / Nou" Foreground="#16A34A" FontSize="12"/>
+            </Border>
+            <Border Background="#F1F5F9" CornerRadius="4" Padding="8,3">
+                <TextBlock Text="⬜ Neschimbat" Foreground="#64748B" FontSize="12"/>
+            </Border>
+
+            <!-- Loading spinner -->
+            <ProgressBar x:Name="DiffSpinner"
+                         Style="{StaticResource MaterialDesignCircularProgressBar}"
+                         IsIndeterminate="True" Visibility="Collapsed"
+                         Width="20" Height="20" Margin="20,0,8,0"/>
+            <TextBlock x:Name="StatusInfoText" Text="" VerticalAlignment="Center"
+                       Foreground="#6366F1" FontStyle="Italic"/>
+        </StackPanel>
+
+        <!-- ── SUMAR ── -->
+        <Border Grid.Row="2" x:Name="SummaryBorder" Visibility="Collapsed"
+                Background="#EEF2FF" BorderBrush="#6366F1" BorderThickness="1"
+                CornerRadius="6" Padding="12,8" Margin="0,0,0,12">
+            <TextBlock x:Name="SummaryText" FontWeight="SemiBold" Foreground="#4338CA"/>
+        </Border>
+
+        <!-- ── CONȚINUT DIFF: Side-by-side ── -->
+        <Grid Grid.Row="3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="8"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Coloana stângă: FD Veche -->
+            <GroupBox Grid.Column="0" Style="{StaticResource MaterialDesignCardGroupBox}">
+                <GroupBox.Header>
+                    <TextBlock FontWeight="Bold" Foreground="#EF4444">
+                        📄 Versiune VECHE
+                    </TextBlock>
+                </GroupBox.Header>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel x:Name="OldPanel" Margin="8"/>
+                </ScrollViewer>
+            </GroupBox>
+
+            <!-- Separator -->
+            <GridSplitter Grid.Column="1" Width="8" HorizontalAlignment="Stretch"
+                          Background="Transparent" Cursor="SizeWE"/>
+
+            <!-- Coloana dreaptă: FD Nouă -->
+            <GroupBox Grid.Column="2" Style="{StaticResource MaterialDesignCardGroupBox}">
+                <GroupBox.Header>
+                    <TextBlock FontWeight="Bold" Foreground="#10B981">
+                        📄 Versiune NOUĂ
+                    </TextBlock>
+                </GroupBox.Header>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel x:Name="NewPanel" Margin="8"/>
+                </ScrollViewer>
+            </GroupBox>
+        </Grid>
+    </Grid>
+</Window>
